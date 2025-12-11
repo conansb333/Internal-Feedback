@@ -1,0 +1,5 @@
+{
+  "name": "Internal Feedback",
+  "description": "A secure, role-based internal feedback and reporting system for checking colleague behavior and processes. Features AI-assisted feedback writing and sentiment analysis.",
+  "requestFramePermissions": []
+}
