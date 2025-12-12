@@ -50,6 +50,7 @@ const TYPE_CONFIG: Record<AnnouncementType, { label: string, icon: any, color: s
 export const Announcements: React.FC<AnnouncementsProps> = ({ currentUser }) => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   
   // Form State
   const [title, setTitle] = useState('');
@@ -111,25 +112,31 @@ export const Announcements: React.FC<AnnouncementsProps> = ({ currentUser }) => 
     loadAnnouncements();
   };
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent bubble up events
-    if (confirm('Are you sure you want to delete this announcement? This cannot be undone.')) {
-      // Optimistic Update
-      setAnnouncements(prev => prev.filter(a => a.id !== id));
-      
-      // Perform Delete
-      await storageService.deleteAnnouncement(id);
-      
-      storageService.saveLog({
-        id: Date.now().toString(),
-        userId: currentUser.id,
-        userName: currentUser.name,
-        userRole: currentUser.role,
-        action: 'DELETE_ANNOUNCEMENT',
-        details: `Deleted announcement ID: ${id}`,
-        timestamp: Date.now()
-      });
-    }
+  const confirmDelete = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setDeleteId(id);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+
+    // Optimistic Update
+    setAnnouncements(prev => prev.filter(a => a.id !== deleteId));
+    
+    // Perform Delete
+    await storageService.deleteAnnouncement(deleteId);
+    
+    storageService.saveLog({
+      id: Date.now().toString(),
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userRole: currentUser.role,
+      action: 'DELETE_ANNOUNCEMENT',
+      details: `Deleted announcement ID: ${deleteId}`,
+      timestamp: Date.now()
+    });
+
+    setDeleteId(null);
   };
 
   const formatTime = (ts: number) => {
@@ -294,7 +301,7 @@ export const Announcements: React.FC<AnnouncementsProps> = ({ currentUser }) => 
                          
                          {isManager && (
                            <button 
-                             onClick={(e) => handleDelete(item.id, e)} 
+                             onClick={(e) => confirmDelete(e, item.id)} 
                              className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
                              title="Delete Announcement"
                            >
@@ -329,6 +336,25 @@ export const Announcements: React.FC<AnnouncementsProps> = ({ currentUser }) => 
            })
          )}
       </div>
+
+      {/* Custom Delete Confirmation Modal */}
+      {deleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95">
+             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mb-4 mx-auto">
+                 <Trash2 className="w-6 h-6" />
+             </div>
+             <h3 className="text-lg font-bold text-center text-slate-900 dark:text-white mb-2">Delete Announcement?</h3>
+             <p className="text-center text-slate-500 dark:text-slate-400 text-sm mb-6">
+               Are you sure you want to remove this update? This action cannot be undone.
+             </p>
+             <div className="flex gap-3">
+               <Button variant="secondary" onClick={() => setDeleteId(null)} className="flex-1">Cancel</Button>
+               <Button variant="danger" onClick={handleDelete} className="flex-1">Delete</Button>
+             </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

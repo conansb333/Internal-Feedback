@@ -198,8 +198,12 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
           
           const toName = getUserName(item.toUserId);
 
+          // If rejected AND I am NOT the sender, fade it out (irrelevant to others mostly). 
+          // If I AM the sender, keep it full opacity so I see the rejection.
+          const isFaded = item.approvalStatus === ApprovalStatus.REJECTED && !isSender;
+
           return (
-            <div key={item.id} className={`bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-md transition-shadow duration-200 ${item.approvalStatus === ApprovalStatus.REJECTED ? 'opacity-70' : ''}`}>
+            <div key={item.id} className={`bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-md transition-shadow duration-200 ${isFaded ? 'opacity-50 grayscale' : ''}`}>
               
               {/* Header Strip */}
               <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -272,20 +276,20 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
                      </div>
                    )}
                    
-                   {/* Manager Notes / Rejection Reason */}
+                   {/* Manager Notes / Rejection Reason - ENHANCED VISIBILITY */}
                    {item.managerNotes && (
-                       <div className={`rounded-xl p-4 border ${
+                       <div className={`mt-4 rounded-xl p-4 border-l-4 shadow-sm animate-in fade-in slide-in-from-top-2 ${
                            item.approvalStatus === ApprovalStatus.APPROVED 
-                             ? 'bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800' 
-                             : 'bg-red-50/50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
+                             ? 'bg-green-50 dark:bg-green-900/10 border-green-500 border-y-0 border-r-0' 
+                             : 'bg-red-50 dark:bg-red-900/10 border-red-500 border-y-0 border-r-0'
                        }`}>
-                          <h4 className={`text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-2 ${
-                              item.approvalStatus === ApprovalStatus.APPROVED ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
+                          <h4 className={`text-sm font-bold flex items-center gap-2 mb-1 ${
+                              item.approvalStatus === ApprovalStatus.APPROVED ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'
                           }`}>
-                             <MessageSquare className="w-3.5 h-3.5" />
-                             {item.approvalStatus === ApprovalStatus.APPROVED ? 'Manager Coaching' : 'Reason for Rejection'}
+                             <MessageSquare className="w-4 h-4" />
+                             {item.approvalStatus === ApprovalStatus.APPROVED ? 'Manager Coaching' : 'Rejection Reason'}
                           </h4>
-                          <p className="text-slate-700 dark:text-slate-300 text-sm">
+                          <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
                              {item.managerNotes}
                           </p>
                        </div>
