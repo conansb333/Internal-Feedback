@@ -26,11 +26,32 @@ export default function App() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  // 1. Session Restoration Logic
+  useEffect(() => {
+    const savedUser = localStorage.getItem('feedback_app_session');
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser);
+        setAuth({ user, isAuthenticated: true });
+      } catch (e) {
+        localStorage.removeItem('feedback_app_session');
+      }
+    }
+
+    // Restore dark mode preference if exists
+    const savedTheme = localStorage.getItem('feedback_app_theme');
+    if (savedTheme === 'dark') {
+      setDarkMode(true);
+    }
+  }, []);
+
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('feedback_app_theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('feedback_app_theme', 'light');
     }
   }, [darkMode]);
 
@@ -44,6 +65,9 @@ export default function App() {
       const user = users.find(u => u.username === username && u.password === password);
       
       if (user) {
+        // 2. Save Session
+        localStorage.setItem('feedback_app_session', JSON.stringify(user));
+        
         setAuth({ user, isAuthenticated: true });
         setActiveTab('dashboard');
         // Log Login Action
@@ -103,6 +127,9 @@ export default function App() {
 
       setSuccessMsg('Account created successfully! Signing in...');
       setTimeout(() => {
+        // 3. Save Session on Signup
+        localStorage.setItem('feedback_app_session', JSON.stringify(newUser));
+        
         setAuth({ user: newUser, isAuthenticated: true });
         setActiveTab('dashboard');
         setIsLoading(false);
@@ -126,6 +153,10 @@ export default function App() {
         timestamp: Date.now()
       });
     }
+    
+    // 4. Clear Session
+    localStorage.removeItem('feedback_app_session');
+    
     setAuth({ user: null, isAuthenticated: false });
     setUsername('');
     setPassword('');
@@ -321,8 +352,8 @@ export default function App() {
           <StickyNotes currentUser={auth.user} />
         )}
 
-        {activeTab === 'analytics' && (auth.user.role === UserRole.MANAGER || auth.user.role === UserRole.ADMIN) && (
-          <AnalyticsDashboard />
+        {activeTab === 'analytics' && (
+          <AnalyticsDashboard currentUser={auth.user} />
         )}
 
         {activeTab === 'latest-reports' && (auth.user.role === UserRole.MANAGER || auth.user.role === UserRole.ADMIN) && (

@@ -15,7 +15,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, activeTab, set
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN] },
     { id: 'notes', label: 'My Notes', icon: PenLine, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN] },
-    { id: 'analytics', label: 'Analytics', icon: BarChart2, roles: [UserRole.MANAGER, UserRole.ADMIN] },
+    { id: 'analytics', label: 'Analytics', icon: BarChart2, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN] },
     { id: 'latest-reports', label: 'Latest Activity', icon: Activity, roles: [UserRole.MANAGER, UserRole.ADMIN] },
     { id: 'audit-logs', label: 'Audit Logs', icon: History, roles: [UserRole.MANAGER, UserRole.ADMIN] },
     { id: 'submit-feedback', label: 'New Report', icon: Send, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN] },

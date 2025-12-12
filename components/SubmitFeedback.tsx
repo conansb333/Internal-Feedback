@@ -113,9 +113,9 @@ export const SubmitFeedback: React.FC<SubmitFeedbackProps> = ({ currentUser, onS
       )
   }
 
-  // Helper styles for inputs
+  // Helper styles for inputs - Added 'border' class here
   const inputLabel = "block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2";
-  const inputClass = "block w-full rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-3 text-sm text-slate-900 dark:text-white focus:border-indigo-500 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-800 transition-all shadow-sm";
+  const inputClass = "block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-3 text-sm text-slate-900 dark:text-white focus:border-indigo-500 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-800 transition-all shadow-sm";
   const sectionClass = "bg-white dark:bg-slate-900 p-6 md:p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 mb-6";
   const sectionHeaderClass = "text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2 pb-2 border-b border-slate-50 dark:border-slate-800";
 
