@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { User, Note, NoteColor, NoteFontSize } from '../types';
 import { storageService } from '../services/storageService';
-import { Plus, Trash2, Search, PenLine, GripHorizontal, Type } from 'lucide-react';
+import { Plus, Trash2, Search, PenLine, GripHorizontal, Type, AlertTriangle } from 'lucide-react';
+import { Button } from './Button';
 
 interface StickyNotesProps {
   currentUser: User;
@@ -29,6 +30,9 @@ export const StickyNotes: React.FC<StickyNotesProps> = ({ currentUser }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [draggedNoteId, setDraggedNoteId] = useState<string | null>(null);
+  
+  // Modal State
+  const [noteToDelete, setNoteToDelete] = useState<Note | null>(null);
 
   useEffect(() => {
     loadNotes();
@@ -71,11 +75,15 @@ export const StickyNotes: React.FC<StickyNotesProps> = ({ currentUser }) => {
     }
   };
 
-  const deleteNote = async (id: string) => {
-    if (confirm('Are you sure you want to delete this note?')) {
-        await storageService.deleteNote(id);
-        setNotes(notes.filter(n => n.id !== id));
-    }
+  const initiateDelete = (note: Note) => {
+    setNoteToDelete(note);
+  };
+
+  const confirmDelete = async () => {
+    if (!noteToDelete) return;
+    await storageService.deleteNote(noteToDelete.id);
+    setNotes(notes.filter(n => n.id !== noteToDelete.id));
+    setNoteToDelete(null);
   };
 
   // --- Drag and Drop Logic ---
@@ -237,7 +245,7 @@ export const StickyNotes: React.FC<StickyNotesProps> = ({ currentUser }) => {
                             onMouseDown={(e) => e.stopPropagation()}
                             onClick={(e) => {
                                 e.stopPropagation();
-                                deleteNote(note.id);
+                                initiateDelete(note);
                             }}
                             className="p-2 bg-black/5 dark:bg-white/10 hover:bg-red-500 hover:text-white dark:hover:bg-red-500 rounded-full text-current transition-colors"
                             title="Delete"
@@ -248,6 +256,40 @@ export const StickyNotes: React.FC<StickyNotesProps> = ({ currentUser }) => {
                   </div>
               ))}
           </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {noteToDelete && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95">
+             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mb-4 mx-auto">
+                 <AlertTriangle className="w-6 h-6" />
+             </div>
+             
+             <h3 className="text-xl font-bold text-center text-slate-900 dark:text-white mb-2">Delete Note?</h3>
+             
+             <p className="text-center text-slate-500 dark:text-slate-400 text-sm mb-6 leading-relaxed">
+               Are you sure you want to delete this note? This action cannot be undone.
+             </p>
+             
+             <div className="flex gap-3">
+               <Button 
+                 variant="secondary" 
+                 onClick={() => setNoteToDelete(null)}
+                 className="flex-1"
+               >
+                 Cancel
+               </Button>
+               <Button 
+                 variant="danger" 
+                 onClick={confirmDelete}
+                 className="flex-1"
+               >
+                 Delete
+               </Button>
+             </div>
+          </div>
+        </div>
       )}
     </div>
   );
