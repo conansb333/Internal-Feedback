@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, Feedback, ResolutionStatus, ApprovalStatus, Priority, PROCESS_TYPES, SCENARIO_TAGS, ProcessType, ScenarioTag } from '../types';
 import { storageService } from '../services/storageService';
 import { geminiService } from '../services/geminiService';
 import { Button } from './Button';
-import { Wand2, Send, CheckCircle2, User as UserIcon, Calendar, FileText, AlertOctagon, Hash } from 'lucide-react';
+import { Send, CheckCircle2, User as UserIcon, Calendar, FileText, AlertOctagon, Hash } from 'lucide-react';
 
 interface SubmitFeedbackProps {
   currentUser: User;
@@ -12,7 +13,6 @@ interface SubmitFeedbackProps {
 
 export const SubmitFeedback: React.FC<SubmitFeedbackProps> = ({ currentUser, onSubmitted }) => {
   const [users, setUsers] = useState<User[]>([]);
-  const [isRefining, setIsRefining] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -38,14 +38,6 @@ export const SubmitFeedback: React.FC<SubmitFeedbackProps> = ({ currentUser, onS
     };
     loadUsers();
   }, [currentUser.id]);
-
-  const handleRefine = async () => {
-    if (!feedbackContent.trim()) return;
-    setIsRefining(true);
-    const refined = await geminiService.refineFeedback(feedbackContent, processType);
-    setFeedbackContent(refined);
-    setIsRefining(false);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -288,16 +280,6 @@ export const SubmitFeedback: React.FC<SubmitFeedbackProps> = ({ currentUser, onS
                   <FileText className="w-5 h-5 text-indigo-500" />
                   Detailed Feedback
                 </h3>
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  onClick={handleRefine}
-                  disabled={!feedbackContent || isRefining}
-                  className="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 border-indigo-200 dark:border-indigo-900/30 text-xs px-3 py-1.5 h-auto rounded-full"
-                >
-                  <Wand2 className="w-3.5 h-3.5 mr-1.5" />
-                  {isRefining ? 'Refining...' : 'Refine with AI'}
-                </Button>
               </div>
               
               <div className="mb-6">
@@ -308,9 +290,6 @@ export const SubmitFeedback: React.FC<SubmitFeedbackProps> = ({ currentUser, onS
                   placeholder="Provide constructive feedback using the Situation-Behavior-Impact model if possible..."
                   className={`${inputClass} leading-relaxed`}
                 />
-                <p className="text-xs text-slate-400 mt-2 text-right">
-                  AI can help polish your tone. Write a draft and click 'Refine'.
-                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
