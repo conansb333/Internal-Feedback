@@ -8,6 +8,7 @@ import { UserManagement } from './components/UserManagement';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import { LatestReports } from './components/LatestReports';
 import { ActivityLogs } from './components/ActivityLogs';
+import { StickyNotes } from './components/StickyNotes';
 import { Dashboard } from './components/Dashboard';
 import { Lock, BarChart3, Clock, CheckCircle2, AlertTriangle, ArrowRight, UserPlus } from 'lucide-react';
 
@@ -314,6 +315,10 @@ export default function App() {
 
         {activeTab === 'all-feedback' && (auth.user.role === UserRole.MANAGER || auth.user.role === UserRole.ADMIN) && (
           <FeedbackList currentUser={auth.user} mode="all" />
+        )}
+
+        {activeTab === 'notes' && (
+          <StickyNotes currentUser={auth.user} />
         )}
 
         {activeTab === 'analytics' && (auth.user.role === UserRole.MANAGER || auth.user.role === UserRole.ADMIN) && (

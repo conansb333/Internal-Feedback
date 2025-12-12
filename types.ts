@@ -104,6 +104,20 @@ export interface AuditLog {
   timestamp: number;
 }
 
+export type NoteColor = 'yellow' | 'blue' | 'green' | 'pink' | 'purple' | 'orange';
+export type NoteFontSize = 'sm' | 'base' | 'lg' | 'xl';
+
+export interface Note {
+  id: string;
+  userId: string;
+  title: string;
+  content: string;
+  color: NoteColor;
+  fontSize: NoteFontSize;
+  orderIndex: number;
+  timestamp: number;
+}
+
 export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
