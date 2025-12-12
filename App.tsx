@@ -158,7 +158,7 @@ export default function App() {
                 <p className="text-indigo-100 text-lg opacity-90">Elevate your team's performance with intelligent reporting.</p>
              </div>
              <div className="relative z-10 text-sm text-indigo-200">
-               © 2024 Corporate Tools Inc.
+               © {new Date().getFullYear()} Corporate Tools Inc.
              </div>
              
              {/* Decorative circles */}

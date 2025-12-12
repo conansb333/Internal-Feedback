@@ -183,7 +183,7 @@ export const SubmitFeedback: React.FC<SubmitFeedbackProps> = ({ currentUser, onS
                     type="text"
                     value={orderNumber}
                     onChange={(e) => setOrderNumber(e.target.value)}
-                    placeholder="e.g. ORD-2023-001"
+                    placeholder={`e.g. ORD-${new Date().getFullYear()}-001`}
                     className={inputClass}
                   />
                 </div>
