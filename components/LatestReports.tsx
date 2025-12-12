@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { storageService } from '../services/storageService';
 import { geminiService } from '../services/geminiService';
 import { Feedback, User, ResolutionStatus, Priority, ApprovalStatus } from '../types';
 import { Button } from './Button';
-import { Clock, User as UserIcon, ArrowRight, Tag, X, Calendar, FileText, BrainCircuit, Check, Eye, ThumbsUp, ThumbsDown, ShieldAlert, AlertOctagon, Filter, Hash } from 'lucide-react';
+import { Clock, User as UserIcon, ArrowRight, Tag, X, Calendar, FileText, BrainCircuit, Check, Eye, ThumbsUp, ThumbsDown, ShieldAlert, AlertOctagon, Filter, Hash, MessageSquare } from 'lucide-react';
 
 export const LatestReports: React.FC = () => {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
@@ -12,6 +13,10 @@ export const LatestReports: React.FC = () => {
   const [selectedReport, setSelectedReport] = useState<Feedback | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
+  // Action State for Manager Notes
+  const [actionData, setActionData] = useState<{ type: 'APPROVE' | 'REJECT', report: Feedback } | null>(null);
+  const [managerNote, setManagerNote] = useState('');
+
   // Filter State
   const [filterMode, setFilterMode] = useState<'all' | 'pending' | 'high_priority'>('all');
 
@@ -78,11 +83,41 @@ export const LatestReports: React.FC = () => {
     setSelectedReport(updated);
   };
 
-  const updateApprovalStatus = async (feedback: Feedback, status: ApprovalStatus) => {
-    const updated = { ...feedback, approvalStatus: status };
+  // Initiate Approval/Rejection Flow
+  const initiateAction = (report: Feedback, type: 'APPROVE' | 'REJECT') => {
+    setActionData({ type, report });
+    setManagerNote('');
+  };
+
+  // Confirm Action
+  const confirmAction = async () => {
+    if (!actionData) return;
+    
+    const newStatus = actionData.type === 'APPROVE' ? ApprovalStatus.APPROVED : ApprovalStatus.REJECTED;
+    const updated = { 
+        ...actionData.report, 
+        approvalStatus: newStatus,
+        managerNotes: managerNote 
+    };
+
     await storageService.saveFeedback(updated);
-    setFeedbacks(prev => prev.map(f => f.id === feedback.id ? updated : f));
+    
+    // Log
+    const actionLog = actionData.type === 'APPROVE' ? 'APPROVE_REPORT' : 'REJECT_REPORT';
+    storageService.saveLog({
+        id: Date.now().toString(),
+        userId: 'MANAGER', // Context handled by service if not passed, but we'd ideally pass current user here.
+        userName: 'Manager',
+        userRole: 'MANAGER' as any,
+        action: actionLog,
+        details: `Report ${actionData.report.id} ${newStatus}. Note: ${managerNote}`,
+        timestamp: Date.now()
+    });
+
+    setFeedbacks(prev => prev.map(f => f.id === actionData.report.id ? updated : f));
     setSelectedReport(updated);
+    setActionData(null);
+    setManagerNote('');
   };
 
   // Group by day
@@ -119,7 +154,6 @@ export const LatestReports: React.FC = () => {
         </div>
       </div>
 
-      {/* CHANGED: Removed max-w-4xl to allow full width */}
       <div className="w-full pb-20">
         {Object.entries(groupedFeedbacks).map(([day, items]) => (
             <div key={day} className="mb-0">
@@ -237,9 +271,45 @@ export const LatestReports: React.FC = () => {
       {selectedReport && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
               <div 
-                className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800 flex flex-col animate-in zoom-in-95 duration-200"
+                className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800 flex flex-col animate-in zoom-in-95 duration-200 relative"
                 onClick={(e) => e.stopPropagation()}
               >
+                  {/* Action Modal Overlay (Nested) */}
+                  {actionData && (
+                    <div className="absolute inset-0 z-20 bg-white/95 dark:bg-slate-900/95 flex items-center justify-center p-8 backdrop-blur-sm rounded-2xl">
+                        <div className="w-full max-w-md">
+                            <h4 className={`text-xl font-bold mb-2 flex items-center gap-2 ${actionData.type === 'APPROVE' ? 'text-green-600' : 'text-red-600'}`}>
+                                {actionData.type === 'APPROVE' ? <Check className="w-6 h-6" /> : <X className="w-6 h-6" />}
+                                {actionData.type === 'APPROVE' ? 'Approve Report' : 'Reject Report'}
+                            </h4>
+                            <p className="text-slate-600 dark:text-slate-300 mb-4 text-sm">
+                                {actionData.type === 'APPROVE' 
+                                  ? "Provide coaching notes for the reported user (optional but recommended)." 
+                                  : "Explain why this report is invalid (required for the reporter)."
+                                }
+                            </p>
+                            <textarea
+                                autoFocus
+                                className="w-full p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none mb-4"
+                                rows={4}
+                                placeholder={actionData.type === 'APPROVE' ? "Enter coaching steps..." : "Enter reason for rejection..."}
+                                value={managerNote}
+                                onChange={e => setManagerNote(e.target.value)}
+                            />
+                            <div className="flex justify-end gap-3">
+                                <Button variant="secondary" onClick={() => setActionData(null)}>Cancel</Button>
+                                <Button 
+                                    onClick={confirmAction}
+                                    variant={actionData.type === 'APPROVE' ? 'primary' : 'danger'}
+                                    disabled={actionData.type === 'REJECT' && !managerNote.trim()}
+                                >
+                                    Confirm {actionData.type === 'APPROVE' ? 'Approval' : 'Rejection'}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                  )}
+
                   {/* Modal Header */}
                   <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/80 dark:bg-slate-800/50 backdrop-blur sticky top-0 z-10">
                       <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -279,7 +349,7 @@ export const LatestReports: React.FC = () => {
                           
                           <div className="flex gap-2">
                               <button 
-                                onClick={() => updateApprovalStatus(selectedReport, ApprovalStatus.REJECTED)}
+                                onClick={() => initiateAction(selectedReport, 'REJECT')}
                                 disabled={selectedReport.approvalStatus === ApprovalStatus.REJECTED}
                                 className={`px-3 py-1.5 text-xs font-bold rounded-lg flex items-center gap-1 transition-colors ${
                                     selectedReport.approvalStatus === ApprovalStatus.REJECTED 
@@ -290,7 +360,7 @@ export const LatestReports: React.FC = () => {
                                   <ThumbsDown className="w-3 h-3" /> Decline
                               </button>
                               <button 
-                                onClick={() => updateApprovalStatus(selectedReport, ApprovalStatus.APPROVED)}
+                                onClick={() => initiateAction(selectedReport, 'APPROVE')}
                                 disabled={selectedReport.approvalStatus === ApprovalStatus.APPROVED}
                                 className={`px-3 py-1.5 text-xs font-bold rounded-lg flex items-center gap-1 transition-colors ${
                                     selectedReport.approvalStatus === ApprovalStatus.APPROVED
@@ -302,6 +372,25 @@ export const LatestReports: React.FC = () => {
                               </button>
                           </div>
                       </div>
+
+                      {/* Display Manager Notes if present */}
+                      {selectedReport.managerNotes && (
+                          <div className={`p-4 rounded-xl border ${
+                              selectedReport.approvalStatus === ApprovalStatus.APPROVED 
+                                ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800' 
+                                : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
+                          }`}>
+                             <h4 className={`text-sm font-bold mb-1 flex items-center gap-2 ${
+                                  selectedReport.approvalStatus === ApprovalStatus.APPROVED ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
+                             }`}>
+                                <MessageSquare className="w-4 h-4" />
+                                {selectedReport.approvalStatus === ApprovalStatus.APPROVED ? 'Manager Coaching' : 'Reason for Rejection'}
+                             </h4>
+                             <p className="text-sm text-slate-700 dark:text-slate-300">
+                                {selectedReport.managerNotes}
+                             </p>
+                          </div>
+                      )}
 
                       {/* From/To Section */}
                       <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">

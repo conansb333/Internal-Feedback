@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, Feedback, UserRole, ResolutionStatus, ApprovalStatus, Priority } from '../types';
 import { storageService } from '../services/storageService';
 import { geminiService } from '../services/geminiService';
 import { Button } from './Button';
-import { BrainCircuit, Check, Eye, Search, AlertCircle, FileText, Calendar, Tag, User as UserIcon, ShieldAlert, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { BrainCircuit, Check, Eye, Search, AlertCircle, FileText, Calendar, Tag, User as UserIcon, ShieldAlert, ThumbsUp, ThumbsDown, MessageSquare } from 'lucide-react';
 
 interface FeedbackListProps {
   currentUser: User;
@@ -91,6 +92,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
     loadData();
   };
 
+  // Simple approval for quick actions in 'All Reports' view, though detailed approval with notes is in LatestReports
   const updateApproval = async (feedback: Feedback, status: ApprovalStatus) => {
     await storageService.saveFeedback({ ...feedback, approvalStatus: status });
     
@@ -270,6 +272,25 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
                      </div>
                    )}
                    
+                   {/* Manager Notes / Rejection Reason */}
+                   {item.managerNotes && (
+                       <div className={`rounded-xl p-4 border ${
+                           item.approvalStatus === ApprovalStatus.APPROVED 
+                             ? 'bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800' 
+                             : 'bg-red-50/50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
+                       }`}>
+                          <h4 className={`text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-2 ${
+                              item.approvalStatus === ApprovalStatus.APPROVED ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
+                          }`}>
+                             <MessageSquare className="w-3.5 h-3.5" />
+                             {item.approvalStatus === ApprovalStatus.APPROVED ? 'Manager Coaching' : 'Reason for Rejection'}
+                          </h4>
+                          <p className="text-slate-700 dark:text-slate-300 text-sm">
+                             {item.managerNotes}
+                          </p>
+                       </div>
+                   )}
+
                    {/* AI Analysis Block - Only for Approved */}
                    {(isManagerOrAdmin || (item.aiAnalysis && item.approvalStatus === ApprovalStatus.APPROVED)) && (
                       <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-slate-900 border border-indigo-100 dark:border-indigo-900/30 p-4">
@@ -335,6 +356,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
                    {isManagerOrAdmin && mode === 'all' && (
                       <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2">
                          {/* Approval Controls */}
+                         {/* Note: Quick actions here don't show the note modal. For detailed notes, use Latest Activity */}
                          <div className="flex gap-2 mb-2">
                              <Button
                                 onClick={() => updateApproval(item, ApprovalStatus.APPROVED)}

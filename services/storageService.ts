@@ -1,5 +1,6 @@
+
 import { supabase } from './supabaseClient';
-import { User, Feedback, UserRole, AuditLog, Note } from '../types';
+import { User, Feedback, UserRole, AuditLog, Note, Announcement } from '../types';
 
 // Minimal seed data - Only Admin to prevent lockout
 const SEED_USERS: User[] = [
@@ -13,10 +14,12 @@ const LOCAL_USERS_KEY = 'app_users_backup';
 const LOCAL_FEEDBACKS_KEY = 'app_feedbacks_backup';
 const LOCAL_LOGS_KEY = 'audit_logs_backup';
 const LOCAL_NOTES_KEY = 'user_notes_backup';
+const LOCAL_ANNOUNCEMENTS_KEY = 'app_announcements_backup';
 
 // SQL Scripts for Developer Reference / Console Logging
 const CREATE_NOTES_SQL = `create table if not exists notes ( id text primary key, "userId" text not null, title text, content text, color text, "fontSize" text, "orderIndex" numeric, timestamp bigint );`;
 const CREATE_LOGS_SQL = `create table if not exists audit_logs ( id text primary key, "userId" text not null, "userName" text, "userRole" text, action text, details text, timestamp bigint );`;
+const CREATE_ANNOUNCEMENTS_SQL = `create table if not exists announcements ( id text primary key, title text, content text, "authorId" text, "authorName" text, timestamp bigint, "isImportant" boolean, type text );`;
 
 export const storageService = {
   initialize: async () => {
@@ -161,8 +164,6 @@ export const storageService = {
     } catch (e) {}
 
     // 3. Merge and Sort
-    // We prioritize local logs if DB is empty or failed, but if DB works, we merge.
-    // Given the 'Fetch Error' context, mostly likely we rely on local.
     const allLogs = [...dbLogs, ...localLogs];
     const uniqueLogs = Array.from(new Map(allLogs.map(item => [item.id, item])).values());
     
@@ -264,6 +265,45 @@ export const storageService = {
 
     // 2. DB
     try { await supabase.from('notes').delete().eq('id', noteId); } catch(e) {}
+  },
+
+  // Announcement Methods
+  getAnnouncements: async (): Promise<Announcement[]> => {
+    try {
+      const { data, error } = await supabase.from('announcements').select('*');
+      if (!error && data) {
+        localStorage.setItem(LOCAL_ANNOUNCEMENTS_KEY, JSON.stringify(data));
+        return data;
+      }
+    } catch(e) {}
+
+    const local = localStorage.getItem(LOCAL_ANNOUNCEMENTS_KEY);
+    return local ? JSON.parse(local) : [];
+  },
+
+  saveAnnouncement: async (announcement: Announcement) => {
+     // 1. Local
+     const stored = JSON.parse(localStorage.getItem(LOCAL_ANNOUNCEMENTS_KEY) || '[]');
+     stored.push(announcement);
+     localStorage.setItem(LOCAL_ANNOUNCEMENTS_KEY, JSON.stringify(stored));
+
+     // 2. DB
+     try {
+       const { error } = await supabase.from('announcements').insert(announcement);
+       if (error && error.code === '42P01') {
+          console.warn('MISSING TABLE "announcements". Run SQL:', CREATE_ANNOUNCEMENTS_SQL);
+       }
+     } catch(e) {}
+  },
+
+  deleteAnnouncement: async (id: string) => {
+     // 1. Local
+     const stored = JSON.parse(localStorage.getItem(LOCAL_ANNOUNCEMENTS_KEY) || '[]');
+     const filtered = stored.filter((a: Announcement) => a.id !== id);
+     localStorage.setItem(LOCAL_ANNOUNCEMENTS_KEY, JSON.stringify(filtered));
+
+     // 2. DB
+     try { await supabase.from('announcements').delete().eq('id', id); } catch(e) {}
   }
 };
 

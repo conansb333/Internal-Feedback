@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { AuthState, User, UserRole, Feedback, ResolutionStatus, AuditLog } from './types';
 import { storageService } from './services/storageService';
@@ -9,6 +10,7 @@ import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import { LatestReports } from './components/LatestReports';
 import { ActivityLogs } from './components/ActivityLogs';
 import { StickyNotes } from './components/StickyNotes';
+import { Announcements } from './components/Announcements';
 import { Dashboard } from './components/Dashboard';
 import { Lock, BarChart3, Clock, CheckCircle2, AlertTriangle, ArrowRight, UserPlus } from 'lucide-react';
 
@@ -327,6 +329,10 @@ export default function App() {
       <main className="flex-1 overflow-hidden relative flex flex-col">
         {activeTab === 'dashboard' && (
           <Dashboard user={auth.user} setActiveTab={setActiveTab} />
+        )}
+
+        {activeTab === 'announcements' && (
+          <Announcements currentUser={auth.user} />
         )}
 
         {activeTab === 'users' && auth.user.role === UserRole.ADMIN && (

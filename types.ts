@@ -1,3 +1,4 @@
+
 export enum UserRole {
   USER = 'USER',       // Colleague
   MANAGER = 'MANAGER', // Previously Admin/Manager
@@ -89,9 +90,24 @@ export interface Feedback {
   feedbackContent: string; // The "Feedback" text area
   additionalNotes: string;
   resolutionDate: string; // YYYY-MM-DD
+  
+  managerNotes?: string; // New: Reason for Rejection or Coaching for Approval
 
   timestamp: number;
   aiAnalysis?: string;
+}
+
+export type AnnouncementType = 'GENERAL' | 'ALERT' | 'SUCCESS' | 'MAINTENANCE' | 'POLICY';
+
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  authorId: string;
+  authorName: string;
+  timestamp: number;
+  isImportant: boolean;
+  type: AnnouncementType;
 }
 
 export interface AuditLog {
