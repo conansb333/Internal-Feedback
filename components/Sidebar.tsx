@@ -55,7 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, activeTab, set
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          Feedback
+          Internal Feedback
         </h1>
         
         {/* Notification Bell Button */}

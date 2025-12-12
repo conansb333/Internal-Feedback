@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { storageService } from '../services/storageService';
 import { Button } from './Button';
-import { Trash2, UserPlus, Shield, Check, X, Clock, RefreshCw } from 'lucide-react';
+import { Trash2, UserPlus, Shield, Check, X, Clock, RefreshCw, AlertTriangle } from 'lucide-react';
 
 interface UserManagementProps {
   currentUser: User;
@@ -13,6 +13,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null); // Track user for deletion modal
   const [formData, setFormData] = useState({ name: '', username: '', password: '', role: UserRole.USER });
 
   useEffect(() => {
@@ -59,26 +60,32 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
       loadUsers();
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this user? This will also remove their associated activity.')) {
-      const userToDelete = users.find(u => u.id === id);
-      const success = await storageService.deleteUser(id);
-      if (success) {
-        // Log Deletion
-        storageService.saveLog({
-            id: Date.now().toString(),
-            userId: currentUser.id,
-            userName: currentUser.name,
-            userRole: currentUser.role,
-            action: 'DELETE_USER',
-            details: `Deleted user: ${userToDelete?.name || 'Unknown'} (${userToDelete?.username})`,
-            timestamp: Date.now()
-        });
-        loadUsers();
-      } else {
-        alert('Failed to delete user. Please check database permissions or try again.');
-      }
+  // Open the custom modal instead of window.confirm
+  const initiateDelete = (user: User) => {
+    setUserToDelete(user);
+  };
+
+  // Actual deletion logic called by the modal
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+
+    const success = await storageService.deleteUser(userToDelete.id);
+    if (success) {
+      // Log Deletion
+      storageService.saveLog({
+          id: Date.now().toString(),
+          userId: currentUser.id,
+          userName: currentUser.name,
+          userRole: currentUser.role,
+          action: 'DELETE_USER',
+          details: `Deleted user: ${userToDelete.name} (${userToDelete.username})`,
+          timestamp: Date.now()
+      });
+      loadUsers();
+    } else {
+      alert('Failed to delete user. Please check database permissions or try again.');
     }
+    setUserToDelete(null);
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -175,7 +182,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
                                         <Button onClick={() => handleApprove(user)} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto text-sm py-2">
                                             <Check className="w-4 h-4 mr-2" /> Approve
                                         </Button>
-                                        <Button variant="danger" onClick={() => handleDelete(user.id)} className="w-full sm:w-auto text-sm py-2">
+                                        <Button variant="danger" onClick={() => initiateDelete(user)} className="w-full sm:w-auto text-sm py-2">
                                             <X className="w-4 h-4 mr-2" /> Reject
                                         </Button>
                                     </>
@@ -239,7 +246,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
                       )}
                       
                       <button 
-                        onClick={() => handleDelete(user.id)}
+                        onClick={() => initiateDelete(user)}
                         className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                         title="Delete User"
                       >
@@ -259,10 +266,10 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
         </table>
       </div>
 
-      {/* Modal */}
+      {/* CREATE USER MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 w-full max-w-md shadow-2xl transform transition-all border border-slate-200 dark:border-slate-800">
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 w-full max-w-md shadow-2xl transform transition-all border border-slate-200 dark:border-slate-800 animate-in zoom-in-95">
             <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Create Account</h3>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
@@ -295,6 +302,41 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
                 <Button type="submit">Create User</Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {userToDelete && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95">
+             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mb-4 mx-auto">
+                 <AlertTriangle className="w-6 h-6" />
+             </div>
+             
+             <h3 className="text-xl font-bold text-center text-slate-900 dark:text-white mb-2">Delete Team Member?</h3>
+             
+             <p className="text-center text-slate-500 dark:text-slate-400 text-sm mb-6 leading-relaxed">
+               You are about to delete <span className="font-bold text-slate-800 dark:text-white">{userToDelete.name}</span>. 
+               This will effectively remove their access and all associated activity logs. This action cannot be undone.
+             </p>
+             
+             <div className="flex gap-3">
+               <Button 
+                 variant="secondary" 
+                 onClick={() => setUserToDelete(null)}
+                 className="flex-1"
+               >
+                 Cancel
+               </Button>
+               <Button 
+                 variant="danger" 
+                 onClick={confirmDelete}
+                 className="flex-1"
+               >
+                 Delete Member
+               </Button>
+             </div>
           </div>
         </div>
       )}
