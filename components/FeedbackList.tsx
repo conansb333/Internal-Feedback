@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Feedback, UserRole, ResolutionStatus, ApprovalStatus, Priority } from '../types';
 import { storageService } from '../services/storageService';
 import { Button } from './Button';
-import { Check, Eye, Search, FileText, Calendar, Tag, ThumbsUp, ThumbsDown, MessageSquare, CheckCircle2, ShieldAlert, Download, FileSpreadsheet } from 'lucide-react';
+import { Check, Eye, Search, FileText, Calendar, Tag, ThumbsUp, ThumbsDown, MessageSquare, CheckCircle2, ShieldAlert, Download, FileSpreadsheet, Archive } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -201,8 +201,15 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
     <div className="p-8 h-full overflow-y-auto">
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-4">
         <div>
-           <h2 className="text-3xl font-bold text-slate-900 dark:text-white">{mode === 'all' ? 'All Reports' : 'My Reports'}</h2>
-           <p className="text-slate-500 dark:text-slate-400">Manage and track feedback progress.</p>
+           <h2 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+             {mode === 'all' ? (
+               <ShieldAlert className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+             ) : (
+               <Archive className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+             )}
+             {mode === 'all' ? 'All Reports' : 'My Reports'}
+           </h2>
+           <p className="text-slate-500 dark:text-slate-400 mt-1">Manage and track feedback progress.</p>
         </div>
         
         <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
@@ -315,7 +322,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
                         )}
                         {item.additionalNotes && (
                           <div className="pt-3 border-t border-slate-200 dark:border-slate-700/50">
-                             <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Notes</h4>
+                             <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Advice</h4>
                              <p className="text-slate-500 dark:text-slate-400 text-xs italic">{item.additionalNotes}</p>
                           </div>
                         )}

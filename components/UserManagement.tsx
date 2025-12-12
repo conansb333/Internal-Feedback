@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { storageService } from '../services/storageService';
 import { Button } from './Button';
-import { Trash2, UserPlus, Shield, Check, X, Clock, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Trash2, UserPlus, Shield, Check, X, Clock, RefreshCw, AlertTriangle, Users } from 'lucide-react';
 
 interface UserManagementProps {
   currentUser: User;
@@ -137,8 +137,11 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
     <div className="p-8 h-full overflow-y-auto">
       <div className="flex justify-between items-center mb-8">
         <div>
-           <h2 className="text-3xl font-bold text-slate-900 dark:text-white">User Management</h2>
-           <p className="text-slate-500 dark:text-slate-400">Manage access and roles for your team.</p>
+           <h2 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+             <Users className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+             User Management
+           </h2>
+           <p className="text-slate-500 dark:text-slate-400 mt-1">Manage access and roles for your team.</p>
         </div>
         <div className="flex gap-2">
             <button 

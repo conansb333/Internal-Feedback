@@ -116,8 +116,11 @@ export const SubmitFeedback: React.FC<SubmitFeedbackProps> = ({ currentUser, onS
       <div className="max-w-5xl mx-auto p-8 pb-12">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Create Report</h2>
-            <p className="text-slate-500 dark:text-slate-400">Document process issues or colleague feedback.</p>
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+              <Send className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+              Create Report
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">Document process issues or colleague feedback.</p>
           </div>
         </div>
         
@@ -173,9 +176,10 @@ export const SubmitFeedback: React.FC<SubmitFeedbackProps> = ({ currentUser, onS
                   <label className={inputLabel}>Order Number</label>
                   <input 
                     type="text"
+                    inputMode="numeric"
                     value={orderNumber}
-                    onChange={(e) => setOrderNumber(e.target.value)}
-                    placeholder={`e.g. ORD-${new Date().getFullYear()}-001`}
+                    onChange={(e) => setOrderNumber(e.target.value.replace(/\D/g, ''))}
+                    placeholder="e.g. 10239455"
                     className={inputClass}
                   />
                 </div>
@@ -294,12 +298,12 @@ export const SubmitFeedback: React.FC<SubmitFeedbackProps> = ({ currentUser, onS
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                     <label className={inputLabel}>Additional Notes</label>
+                     <label className={inputLabel}>Any Advice?</label>
                      <input 
                         type="text"
                         value={additionalNotes}
                         onChange={(e) => setAdditionalNotes(e.target.value)}
-                        placeholder="Internal notes..."
+                        placeholder="Advice or suggestions..."
                         className={inputClass}
                       />
                   </div>
