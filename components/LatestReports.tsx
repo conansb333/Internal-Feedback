@@ -4,18 +4,24 @@ import { storageService } from '../services/storageService';
 import { geminiService } from '../services/geminiService';
 import { Feedback, User, ResolutionStatus, Priority, ApprovalStatus } from '../types';
 import { Button } from './Button';
-import { Clock, User as UserIcon, ArrowRight, Tag, X, Calendar, FileText, BrainCircuit, Check, Eye, ThumbsUp, ThumbsDown, ShieldAlert, AlertOctagon, Filter, Hash, MessageSquare } from 'lucide-react';
+import { Clock, ArrowRight, Tag, X, Calendar, FileText, Check, Eye, ThumbsUp, ThumbsDown, AlertOctagon, Filter, MessageSquare } from 'lucide-react';
 
-export const LatestReports: React.FC = () => {
+interface LatestReportsProps {
+  currentUser?: User;
+}
+
+export const LatestReports: React.FC<LatestReportsProps> = ({ currentUser }) => {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [filteredFeedbacks, setFilteredFeedbacks] = useState<Feedback[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedReport, setSelectedReport] = useState<Feedback | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   
   // Action State for Manager Notes
   const [actionData, setActionData] = useState<{ type: 'APPROVE' | 'REJECT', report: Feedback } | null>(null);
-  const [managerNote, setManagerNote] = useState('');
+  
+  // Two separate note states
+  const [noteToReporter, setNoteToReporter] = useState('');
+  const [noteToReceiver, setNoteToReceiver] = useState('');
 
   // Filter State
   const [filterMode, setFilterMode] = useState<'all' | 'pending' | 'high_priority'>('all');
@@ -62,20 +68,6 @@ export const LatestReports: React.FC = () => {
       return date.toLocaleDateString();
   };
 
-  const handleAnalyze = async (feedback: Feedback) => {
-    setIsAnalyzing(true);
-    const fullText = `Fault: ${feedback.faultDescription}\nFeedback: ${feedback.feedbackContent}`;
-    const analysis = await geminiService.analyzeFeedback(fullText);
-    const updatedFeedback = { ...feedback, aiAnalysis: analysis };
-    
-    await storageService.saveFeedback(updatedFeedback);
-    
-    // Update local state
-    setFeedbacks(prev => prev.map(f => f.id === feedback.id ? updatedFeedback : f));
-    setSelectedReport(updatedFeedback);
-    setIsAnalyzing(false);
-  };
-
   const updateResolutionStatus = async (feedback: Feedback, newStatus: ResolutionStatus) => {
     const updated = { ...feedback, resolutionStatus: newStatus };
     await storageService.saveFeedback(updated);
@@ -86,7 +78,9 @@ export const LatestReports: React.FC = () => {
   // Initiate Approval/Rejection Flow
   const initiateAction = (report: Feedback, type: 'APPROVE' | 'REJECT') => {
     setActionData({ type, report });
-    setManagerNote('');
+    // Reset inputs
+    setNoteToReporter('');
+    setNoteToReceiver('');
   };
 
   // Confirm Action
@@ -94,10 +88,12 @@ export const LatestReports: React.FC = () => {
     if (!actionData) return;
     
     const newStatus = actionData.type === 'APPROVE' ? ApprovalStatus.APPROVED : ApprovalStatus.REJECTED;
-    const updated = { 
+    const updated: Feedback = { 
         ...actionData.report, 
         approvalStatus: newStatus,
-        managerNotes: managerNote 
+        managerNoteToReporter: noteToReporter,
+        managerNoteToReceiver: noteToReceiver,
+        managerName: currentUser?.name || 'Manager' 
     };
 
     await storageService.saveFeedback(updated);
@@ -106,18 +102,19 @@ export const LatestReports: React.FC = () => {
     const actionLog = actionData.type === 'APPROVE' ? 'APPROVE_REPORT' : 'REJECT_REPORT';
     storageService.saveLog({
         id: Date.now().toString(),
-        userId: 'MANAGER', // Context handled by service if not passed, but we'd ideally pass current user here.
-        userName: 'Manager',
-        userRole: 'MANAGER' as any,
+        userId: currentUser?.id || 'MANAGER', 
+        userName: currentUser?.name || 'Manager',
+        userRole: currentUser?.role || 'MANAGER' as any,
         action: actionLog,
-        details: `Report ${actionData.report.id} ${newStatus}. Note: ${managerNote}`,
+        details: `Report ${actionData.report.id} ${newStatus}.`,
         timestamp: Date.now()
     });
 
     setFeedbacks(prev => prev.map(f => f.id === actionData.report.id ? updated : f));
     setSelectedReport(updated);
     setActionData(null);
-    setManagerNote('');
+    setNoteToReporter('');
+    setNoteToReceiver('');
   };
 
   // Group by day
@@ -157,7 +154,7 @@ export const LatestReports: React.FC = () => {
       <div className="w-full pb-20">
         {Object.entries(groupedFeedbacks).map(([day, items]) => (
             <div key={day} className="mb-0">
-                <div className="sticky top-0 bg-slate-50 dark:bg-slate-950 py-3 z-20 backdrop-blur-md bg-opacity-95 dark:bg-opacity-95 flex items-center gap-4 border-b border-transparent">
+                <div className="sticky top-0 bg-slate-100 dark:bg-slate-950 py-3 z-20 backdrop-blur-md bg-opacity-95 dark:bg-opacity-95 flex items-center gap-4 border-b border-transparent">
                     <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider pl-4">
                         {day}
                     </h3>
@@ -282,26 +279,53 @@ export const LatestReports: React.FC = () => {
                                 {actionData.type === 'APPROVE' ? <Check className="w-6 h-6" /> : <X className="w-6 h-6" />}
                                 {actionData.type === 'APPROVE' ? 'Approve Report' : 'Reject Report'}
                             </h4>
-                            <p className="text-slate-600 dark:text-slate-300 mb-4 text-sm">
+                            
+                            <p className="text-slate-600 dark:text-slate-300 mb-6 text-sm">
                                 {actionData.type === 'APPROVE' 
-                                  ? "Provide coaching notes for the reported user (optional but recommended)." 
-                                  : "Explain why this report is invalid (required for the reporter)."
+                                  ? "You are approving this report. Provide specific feedback for each party." 
+                                  : "You are rejecting this report. Explain why to the reporter."
                                 }
                             </p>
-                            <textarea
-                                autoFocus
-                                className="w-full p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none mb-4"
-                                rows={4}
-                                placeholder={actionData.type === 'APPROVE' ? "Enter coaching steps..." : "Enter reason for rejection..."}
-                                value={managerNote}
-                                onChange={e => setManagerNote(e.target.value)}
-                            />
+
+                            <div className="space-y-4 mb-6">
+                                {/* Note to Reporter */}
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                        Note to Reporter {actionData.type === 'APPROVE' ? '(Optional)' : '(Required)'}
+                                    </label>
+                                    <textarea
+                                        autoFocus
+                                        className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                                        rows={3}
+                                        placeholder={actionData.type === 'APPROVE' ? "e.g. Thanks for flagging this..." : "e.g. This is not a valid process error because..."}
+                                        value={noteToReporter}
+                                        onChange={e => setNoteToReporter(e.target.value)}
+                                    />
+                                </div>
+
+                                {/* Note to Receiver (Only on Approval) */}
+                                {actionData.type === 'APPROVE' && (
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                            Note to Reported User (Coaching)
+                                        </label>
+                                        <textarea
+                                            className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                                            rows={3}
+                                            placeholder="e.g. Please ensure you check the SLA next time..."
+                                            value={noteToReceiver}
+                                            onChange={e => setNoteToReceiver(e.target.value)}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="flex justify-end gap-3">
                                 <Button variant="secondary" onClick={() => setActionData(null)}>Cancel</Button>
                                 <Button 
                                     onClick={confirmAction}
                                     variant={actionData.type === 'APPROVE' ? 'primary' : 'danger'}
-                                    disabled={actionData.type === 'REJECT' && !managerNote.trim()}
+                                    disabled={actionData.type === 'REJECT' && !noteToReporter.trim()}
                                 >
                                     Confirm {actionData.type === 'APPROVE' ? 'Approval' : 'Rejection'}
                                 </Button>
@@ -373,22 +397,45 @@ export const LatestReports: React.FC = () => {
                           </div>
                       </div>
 
-                      {/* Display Manager Notes if present */}
-                      {selectedReport.managerNotes && (
+                      {/* Display Manager Notes (Detail View) */}
+                      {(selectedReport.managerNoteToReporter || selectedReport.managerNoteToReceiver || selectedReport.managerNotes) && (
                           <div className={`p-4 rounded-xl border ${
                               selectedReport.approvalStatus === ApprovalStatus.APPROVED 
                                 ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800' 
                                 : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
                           }`}>
-                             <h4 className={`text-sm font-bold mb-1 flex items-center gap-2 ${
+                             <h4 className={`text-sm font-bold mb-3 flex items-center gap-2 ${
                                   selectedReport.approvalStatus === ApprovalStatus.APPROVED ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
                              }`}>
                                 <MessageSquare className="w-4 h-4" />
-                                {selectedReport.approvalStatus === ApprovalStatus.APPROVED ? 'Manager Coaching' : 'Reason for Rejection'}
+                                Manager Feedback
                              </h4>
-                             <p className="text-sm text-slate-700 dark:text-slate-300">
-                                {selectedReport.managerNotes}
-                             </p>
+                             
+                             <div className="space-y-3">
+                                {(selectedReport.managerNoteToReporter || selectedReport.managerNotes) && (
+                                   <div className="bg-white/50 dark:bg-black/20 p-2 rounded">
+                                       <span className="text-xs font-bold uppercase opacity-70 block mb-1">To Reporter:</span>
+                                       <p className="text-sm text-slate-700 dark:text-slate-300">
+                                         {selectedReport.managerNoteToReporter || selectedReport.managerNotes}
+                                       </p>
+                                   </div>
+                                )}
+
+                                {selectedReport.managerNoteToReceiver && (
+                                   <div className="bg-white/50 dark:bg-black/20 p-2 rounded">
+                                       <span className="text-xs font-bold uppercase opacity-70 block mb-1">To Receiver:</span>
+                                       <p className="text-sm text-slate-700 dark:text-slate-300">
+                                         {selectedReport.managerNoteToReceiver}
+                                       </p>
+                                   </div>
+                                )}
+                             </div>
+
+                             {selectedReport.managerName && (
+                                <p className="text-xs mt-3 text-slate-400 dark:text-slate-500 font-medium">
+                                   Reviewed by: {selectedReport.managerName}
+                                </p>
+                             )}
                           </div>
                       )}
 
@@ -482,34 +529,6 @@ export const LatestReports: React.FC = () => {
                               </div>
                           </div>
                       </div>
-
-                      {/* AI Analysis Section */}
-                      {selectedReport.approvalStatus !== ApprovalStatus.REJECTED && (
-                          <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-                              <div className="flex items-center justify-between mb-3">
-                                  <h4 className="text-sm font-bold text-indigo-700 dark:text-indigo-400 flex items-center gap-2">
-                                      <BrainCircuit className="w-4 h-4" /> AI Analysis
-                                  </h4>
-                                  {!selectedReport.aiAnalysis && (
-                                      <Button 
-                                          variant="ghost" 
-                                          onClick={() => handleAnalyze(selectedReport)}
-                                          isLoading={isAnalyzing}
-                                          className="text-xs py-1 h-auto"
-                                      >
-                                          Generate
-                                      </Button>
-                                  )}
-                              </div>
-                              {selectedReport.aiAnalysis ? (
-                                  <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl text-xs text-indigo-900/80 dark:text-indigo-200/80 leading-relaxed border border-indigo-100 dark:border-indigo-900/30">
-                                      {selectedReport.aiAnalysis}
-                                  </div>
-                              ) : (
-                                  <p className="text-xs text-slate-400 italic">No analysis generated yet.</p>
-                              )}
-                          </div>
-                      )}
                   </div>
 
                   {/* Modal Footer / Actions */}

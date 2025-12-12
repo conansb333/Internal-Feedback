@@ -316,7 +316,7 @@ export default function App() {
 
   // Authenticated Layout
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 transition-colors duration-200">
+    <div className="flex h-screen bg-slate-200 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 transition-colors duration-200">
       <Sidebar 
         user={auth.user} 
         onLogout={handleLogout} 
@@ -363,7 +363,7 @@ export default function App() {
         )}
 
         {activeTab === 'latest-reports' && (auth.user.role === UserRole.MANAGER || auth.user.role === UserRole.ADMIN) && (
-          <LatestReports />
+          <LatestReports currentUser={auth.user} />
         )}
 
         {activeTab === 'audit-logs' && (auth.user.role === UserRole.MANAGER || auth.user.role === UserRole.ADMIN) && (

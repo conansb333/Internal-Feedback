@@ -91,7 +91,13 @@ export interface Feedback {
   additionalNotes: string;
   resolutionDate: string; // YYYY-MM-DD
   
-  managerNotes?: string; // New: Reason for Rejection or Coaching for Approval
+  // Manager Feedback Fields
+  managerNoteToReporter?: string; // Note for the person who sent it
+  managerNoteToReceiver?: string; // Note for the person who received it
+  managerName?: string; // Name of the manager who reviewed it
+  
+  // Deprecated but kept for type safety if needed during migration, though we prefer the specific ones above
+  managerNotes?: string; 
 
   timestamp: number;
   aiAnalysis?: string;
@@ -108,6 +114,10 @@ export interface Announcement {
   timestamp: number;
   isImportant: boolean;
   type: AnnouncementType;
+  // Visual Customizations
+  imageUrl?: string;
+  textColor?: string;
+  textSize?: 'sm' | 'base' | 'lg';
 }
 
 export interface AuditLog {

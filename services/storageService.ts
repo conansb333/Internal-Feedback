@@ -1,6 +1,6 @@
 
 import { supabase } from './supabaseClient';
-import { User, Feedback, UserRole, AuditLog, Note, Announcement } from '../types';
+import { User, Feedback, UserRole, AuditLog, Note, Announcement, ApprovalStatus } from '../types';
 
 // Minimal seed data - Only Admin to prevent lockout
 const SEED_USERS: User[] = [
@@ -110,17 +110,61 @@ export const storageService = {
   },
 
   getFeedbacks: async (): Promise<Feedback[]> => {
+    let dbData: Feedback[] = [];
+    
+    // 1. Try Fetch from DB
     try {
       const { data, error } = await supabase.from('feedbacks').select('*');
-      if (!error && data) {
-        localStorage.setItem(LOCAL_FEEDBACKS_KEY, JSON.stringify(data));
-        return data;
-      }
+      if (!error && data) dbData = data;
     } catch (e) {}
     
-    // Fallback
-    const local = localStorage.getItem(LOCAL_FEEDBACKS_KEY);
-    return local ? JSON.parse(local) : [];
+    // 2. Get Local Data
+    const localStr = localStorage.getItem(LOCAL_FEEDBACKS_KEY);
+    const localData: Feedback[] = localStr ? JSON.parse(localStr) : [];
+
+    // 3. Smart Merge Strategy
+    // The goal is to preserve local changes (like Approval Status) if the DB write failed 
+    // or if the DB schema is missing the new columns.
+    
+    const localMap = new Map(localData.map(item => [item.id, item]));
+    const mergedMap = new Map<string, Feedback>();
+
+    // Process DB items first
+    dbData.forEach(remoteItem => {
+        const localItem = localMap.get(remoteItem.id);
+        
+        if (localItem) {
+            // Conflict Resolution:
+            // If local has a meaningful status (Approved/Rejected) and remote is still 'Pending' (or missing),
+            // it implies the remote didn't accept the update. Trust Local.
+            const remotePending = !remoteItem.approvalStatus || remoteItem.approvalStatus === ApprovalStatus.PENDING;
+            const localDecided = localItem.approvalStatus === ApprovalStatus.APPROVED || localItem.approvalStatus === ApprovalStatus.REJECTED;
+
+            if (localDecided && remotePending) {
+                mergedMap.set(remoteItem.id, localItem);
+            } else {
+                // Otherwise, perform a shallow merge, prioritizing remote values for basic fields, 
+                // but keeping local fields if remote is missing them.
+                mergedMap.set(remoteItem.id, { ...localItem, ...remoteItem });
+            }
+        } else {
+            // New item from DB (not in local)
+            mergedMap.set(remoteItem.id, remoteItem);
+        }
+        localMap.delete(remoteItem.id);
+    });
+
+    // Add remaining local-only items (not synced to DB yet)
+    localMap.forEach((val, key) => {
+        mergedMap.set(key, val);
+    });
+
+    const merged = Array.from(mergedMap.values());
+    
+    // 4. Update Local Storage with the merged result to stay in sync
+    localStorage.setItem(LOCAL_FEEDBACKS_KEY, JSON.stringify(merged));
+    
+    return merged;
   },
 
   saveFeedback: async (feedback: Feedback) => {

@@ -4,7 +4,7 @@ import { User, Feedback, UserRole, ResolutionStatus, ApprovalStatus, Priority } 
 import { storageService } from '../services/storageService';
 import { geminiService } from '../services/geminiService';
 import { Button } from './Button';
-import { BrainCircuit, Check, Eye, Search, AlertCircle, FileText, Calendar, Tag, User as UserIcon, ShieldAlert, ThumbsUp, ThumbsDown, MessageSquare } from 'lucide-react';
+import { Check, Eye, Search, FileText, Calendar, Tag, ThumbsUp, ThumbsDown, MessageSquare, CheckCircle2, ShieldAlert } from 'lucide-react';
 
 interface FeedbackListProps {
   currentUser: User;
@@ -15,7 +15,6 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [filteredFeedbacks, setFilteredFeedbacks] = useState<Feedback[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -25,9 +24,6 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
   useEffect(() => {
     const term = searchTerm.toLowerCase();
     const filtered = feedbacks.filter(f => {
-      // Note: We search based on real names here, but display anonymized names in render. 
-      // Ideally search should also respect anonymity but for simplicity we keep search broad 
-      // or we can restrict it. Let's keep broad search but anonymize display.
       const uName = getUserName(f.toUserId).toLowerCase();
       const fName = getUserName(f.fromUserId).toLowerCase();
       const desc = f.faultDescription.toLowerCase();
@@ -60,22 +56,6 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
   // Can view all / manage reports: Manager and Admin
   const isManagerOrAdmin = currentUser.role === UserRole.MANAGER || currentUser.role === UserRole.ADMIN;
 
-  const handleAnalyze = async (feedback: Feedback) => {
-    setAnalyzingIds(prev => new Set(prev).add(feedback.id));
-    const fullText = `Fault: ${feedback.faultDescription}\nFeedback: ${feedback.feedbackContent}`;
-    const analysis = await geminiService.analyzeFeedback(fullText);
-    const updatedFeedback = { ...feedback, aiAnalysis: analysis };
-    
-    await storageService.saveFeedback(updatedFeedback);
-    await loadData(); // Reload to refresh
-    
-    setAnalyzingIds(prev => {
-       const next = new Set(prev);
-       next.delete(feedback.id);
-       return next;
-    });
-  };
-
   const updateStatus = async (feedback: Feedback, newStatus: ResolutionStatus) => {
     await storageService.saveFeedback({ ...feedback, resolutionStatus: newStatus });
     
@@ -94,7 +74,11 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
 
   // Simple approval for quick actions in 'All Reports' view, though detailed approval with notes is in LatestReports
   const updateApproval = async (feedback: Feedback, status: ApprovalStatus) => {
-    await storageService.saveFeedback({ ...feedback, approvalStatus: status });
+    await storageService.saveFeedback({ 
+      ...feedback, 
+      approvalStatus: status,
+      managerName: currentUser.name // Save manager name on quick action too
+    });
     
     storageService.saveLog({
         id: Date.now().toString(),
@@ -202,6 +186,13 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
           // If I AM the sender, keep it full opacity so I see the rejection.
           const isFaded = item.approvalStatus === ApprovalStatus.REJECTED && !isSender;
 
+          // Note Visibility Logic
+          const showReporterNote = (isSender || isManagerOrAdmin) && (item.managerNoteToReporter || item.managerNotes);
+          const showReceiverNote = (!isSender || isManagerOrAdmin) && item.managerNoteToReceiver; // Receiver is !isSender in this context of valid reports
+
+          // Legacy fallback for old reports that only had managerNotes
+          const noteForReporter = item.managerNoteToReporter || item.managerNotes;
+
           return (
             <div key={item.id} className={`bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-md transition-shadow duration-200 ${isFaded ? 'opacity-50 grayscale' : ''}`}>
               
@@ -276,50 +267,47 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
                      </div>
                    )}
                    
-                   {/* Manager Notes / Rejection Reason - ENHANCED VISIBILITY */}
-                   {item.managerNotes && (
+                   {/* Manager Notes Logic */}
+                   {(showReporterNote || showReceiverNote) && (
                        <div className={`mt-4 rounded-xl p-4 border-l-4 shadow-sm animate-in fade-in slide-in-from-top-2 ${
                            item.approvalStatus === ApprovalStatus.APPROVED 
                              ? 'bg-green-50 dark:bg-green-900/10 border-green-500 border-y-0 border-r-0' 
                              : 'bg-red-50 dark:bg-red-900/10 border-red-500 border-y-0 border-r-0'
                        }`}>
-                          <h4 className={`text-sm font-bold flex items-center gap-2 mb-1 ${
+                          <h4 className={`text-sm font-bold flex items-center gap-2 mb-2 ${
                               item.approvalStatus === ApprovalStatus.APPROVED ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'
                           }`}>
                              <MessageSquare className="w-4 h-4" />
                              {item.approvalStatus === ApprovalStatus.APPROVED ? 'Manager Coaching' : 'Rejection Reason'}
                           </h4>
-                          <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
-                             {item.managerNotes}
-                          </p>
-                       </div>
-                   )}
+                          
+                          <div className="space-y-3">
+                             {showReporterNote && (
+                                <div className={isManagerOrAdmin ? "pl-2 border-l-2 border-black/10 dark:border-white/10" : ""}>
+                                   {isManagerOrAdmin && <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">To Reporter:</span>}
+                                   <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
+                                      {noteForReporter}
+                                   </p>
+                                </div>
+                             )}
 
-                   {/* AI Analysis Block - Only for Approved */}
-                   {(isManagerOrAdmin || (item.aiAnalysis && item.approvalStatus === ApprovalStatus.APPROVED)) && (
-                      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-slate-900 border border-indigo-100 dark:border-indigo-900/30 p-4">
-                         <div className="flex justify-between items-start mb-2">
-                            <h4 className="text-xs font-bold text-indigo-700 dark:text-indigo-400 flex items-center gap-1.5">
-                               <BrainCircuit className="w-3.5 h-3.5" />
-                               AI Executive Summary
-                            </h4>
-                            {isManagerOrAdmin && !item.aiAnalysis && item.approvalStatus !== ApprovalStatus.REJECTED && (
-                               <Button 
-                                 variant="ghost" 
-                                 onClick={() => handleAnalyze(item)}
-                                 isLoading={analyzingIds.has(item.id)}
-                                 className="text-xs py-1 h-auto bg-white dark:bg-slate-800 shadow-sm border border-indigo-100 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
-                               >
-                                 Generate Analysis
-                               </Button>
-                            )}
-                         </div>
-                         {item.aiAnalysis ? (
-                            <p className="text-xs text-indigo-900/80 dark:text-indigo-200/80 leading-relaxed italic">{item.aiAnalysis}</p>
-                         ) : (
-                            isManagerOrAdmin && <p className="text-xs text-indigo-300 dark:text-indigo-500">No analysis generated yet.</p>
-                         )}
-                      </div>
+                             {showReceiverNote && (
+                                <div className={isManagerOrAdmin ? "pl-2 border-l-2 border-black/10 dark:border-white/10" : ""}>
+                                   {isManagerOrAdmin && <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">To Receiver:</span>}
+                                   <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
+                                      {item.managerNoteToReceiver}
+                                   </p>
+                                </div>
+                             )}
+                          </div>
+
+                          {item.managerName && (
+                              <div className="mt-3 pt-2 border-t border-black/5 dark:border-white/10 flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+                                 <CheckCircle2 className="w-3.5 h-3.5" />
+                                 Reviewed by: <span className="text-slate-700 dark:text-slate-300">{item.managerName}</span>
+                              </div>
+                          )}
+                       </div>
                    )}
                 </div>
 

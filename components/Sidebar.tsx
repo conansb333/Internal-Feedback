@@ -76,7 +76,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, activeTab, set
           </div>
           <div className="overflow-hidden">
             <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user.name}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate capitalize">{user.role.toLowerCase()}</p>
+            {user.role !== UserRole.USER && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate capitalize">{user.role.toLowerCase()}</p>
+            )}
           </div>
         </div>
         

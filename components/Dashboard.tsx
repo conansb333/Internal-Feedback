@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, Feedback, UserRole, ResolutionStatus, ApprovalStatus, Priority } from '../types';
 import { storageService } from '../services/storageService';
@@ -231,7 +232,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, setActiveTab }) => {
            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 h-full">
               <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
                  <h3 className="font-bold text-slate-800 dark:text-white">Recent Feed</h3>
-                 <button onClick={() => setActiveTab('latest-reports')} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">View All</button>
+                 <button 
+                   onClick={() => setActiveTab(isManager ? 'latest-reports' : 'my-feedback')} 
+                   className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                 >
+                   View All
+                 </button>
               </div>
               <div className="p-4 space-y-4">
                  {recentFeedbacks.length === 0 ? (
