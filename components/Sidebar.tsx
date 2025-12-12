@@ -1,7 +1,9 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
-import { LogOut, LayoutDashboard, Send, Archive, Users, ShieldAlert, ChevronRight, Moon, Sun, BarChart2, Activity, History, PenLine, Megaphone } from 'lucide-react';
+import { storageService } from '../services/storageService';
+import { Notifications } from './Notifications';
+import { LogOut, LayoutDashboard, Send, Archive, Users, ShieldAlert, ChevronRight, Moon, Sun, BarChart2, Activity, History, PenLine, Megaphone, Bell } from 'lucide-react';
 
 interface SidebarProps {
   user: User;
@@ -13,6 +15,21 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, activeTab, setActiveTab, darkMode, toggleDarkMode }) => {
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  // Poll for notifications periodically
+  useEffect(() => {
+    const checkNotifications = async () => {
+        const notifs = await storageService.getNotifications(user.id);
+        setUnreadCount(notifs.filter(n => !n.isRead).length);
+    };
+    
+    checkNotifications();
+    const interval = setInterval(checkNotifications, 5000); // Check every 5s
+    return () => clearInterval(interval);
+  }, [user.id]);
+
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN] },
     { id: 'announcements', label: 'News & Updates', icon: Megaphone, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN] },
@@ -23,27 +40,43 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, activeTab, set
     { id: 'submit-feedback', label: 'New Report', icon: Send, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN] },
     { id: 'my-feedback', label: 'My Reports', icon: Archive, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN] },
     { id: 'all-feedback', label: 'All Reports', icon: ShieldAlert, roles: [UserRole.MANAGER, UserRole.ADMIN] },
-    { id: 'users', label: 'Team Management', icon: Users, roles: [UserRole.ADMIN] },
+    { id: 'users', label: 'Team Management', icon: Users, roles: [UserRole.ADMIN, UserRole.MANAGER] },
   ];
 
   const filteredItems = menuItems.filter(item => item.roles.includes(user.role));
 
   return (
-    <div className="w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0 shadow-xl shadow-slate-200/50 dark:shadow-none z-20 transition-colors duration-200">
-      {/* Brand */}
-      <div className="p-8 pb-4">
-        <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
+    <div className="relative w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0 shadow-xl shadow-slate-200/50 dark:shadow-none z-20 transition-colors duration-200">
+      {/* Brand & Notifications Header */}
+      <div className="p-6 pb-4 flex items-center justify-between">
+        <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-indigo-200 dark:shadow-none">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          Internal Feedback
+          Feedback
         </h1>
+        
+        {/* Notification Bell Button */}
+        <button 
+          onClick={() => setShowNotifications(!showNotifications)}
+          className={`relative p-2 rounded-lg transition-all duration-200 ${showNotifications ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300'}`}
+        >
+           <Bell className="w-5 h-5" />
+           {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
+           )}
+        </button>
       </div>
+
+      {/* Floating Notification Panel */}
+      {showNotifications && (
+         <Notifications currentUser={user} onClose={() => setShowNotifications(false)} />
+      )}
       
       {/* Navigation */}
-      <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+      <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto">
         <div className="px-4 mb-2 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Menu</div>
         {filteredItems.map((item) => {
           const Icon = item.icon;

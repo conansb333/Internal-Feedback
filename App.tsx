@@ -12,7 +12,7 @@ import { ActivityLogs } from './components/ActivityLogs';
 import { StickyNotes } from './components/StickyNotes';
 import { Announcements } from './components/Announcements';
 import { Dashboard } from './components/Dashboard';
-import { Lock, BarChart3, Clock, CheckCircle2, AlertTriangle, ArrowRight, UserPlus } from 'lucide-react';
+import { Lock, BarChart3, Clock, CheckCircle2, AlertTriangle, ArrowRight, UserPlus, Shield } from 'lucide-react';
 
 export default function App() {
   const [auth, setAuth] = useState<AuthState>({ user: null, isAuthenticated: false });
@@ -67,6 +67,12 @@ export default function App() {
       const user = users.find(u => u.username === username && u.password === password);
       
       if (user) {
+        if (!user.isApproved) {
+            setError('Account pending admin approval.');
+            setIsLoading(false);
+            return;
+        }
+
         // 2. Save Session
         localStorage.setItem('feedback_app_session', JSON.stringify(user));
         
@@ -111,31 +117,32 @@ export default function App() {
         name: fullName,
         username: username,
         password: password,
-        role: UserRole.USER // Enforced Role
+        role: UserRole.USER, // Enforced Role
+        isApproved: false // Require Admin Approval
       };
 
       await storageService.saveUser(newUser);
       
-      // Log Signup Action
+      // Log Signup Action (Context is system since user isn't logged in)
       storageService.saveLog({
         id: Date.now().toString(),
-        userId: newUser.id,
+        userId: 'SYSTEM',
         userName: newUser.name,
         userRole: newUser.role,
-        action: 'SIGNUP',
-        details: 'New user account created',
+        action: 'SIGNUP_REQUEST',
+        details: `New user account requested: ${newUser.username}`,
         timestamp: Date.now()
       });
 
-      setSuccessMsg('Account created successfully! Signing in...');
+      setSuccessMsg('Account request sent! Please wait for admin approval.');
+      // Switch back to login mode so they can't access app immediately
+      setIsLoading(false);
       setTimeout(() => {
-        // 3. Save Session on Signup
-        localStorage.setItem('feedback_app_session', JSON.stringify(newUser));
-        
-        setAuth({ user: newUser, isAuthenticated: true });
-        setActiveTab('dashboard');
-        setIsLoading(false);
-      }, 1000);
+          setIsSigningUp(false);
+          // Clear sensitive fields but keep username for convenience
+          setPassword('');
+          setFullName('');
+      }, 3000);
 
     } catch (err) {
       setError('Failed to create account.');
@@ -207,10 +214,10 @@ export default function App() {
           <div className="p-10 flex flex-col justify-center bg-white dark:bg-slate-900">
             <div className="text-center md:text-left mb-8">
                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                 {isSigningUp ? 'Create Account' : 'Welcome Back'}
+                 {isSigningUp ? 'Request Access' : 'Welcome Back'}
                </h2>
                <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-                 {isSigningUp ? 'Enter your details to get started.' : 'Please enter your details to sign in.'}
+                 {isSigningUp ? 'Submit your details for admin approval.' : 'Please enter your details to sign in.'}
                </p>
             </div>
             
@@ -276,7 +283,7 @@ export default function App() {
                 disabled={isLoading || (isSigningUp && !fullName)}
                 className="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white rounded-xl font-medium shadow-lg shadow-indigo-200 dark:shadow-none transform transition-all active:scale-[0.98] flex items-center justify-center group disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {isLoading ? (isSigningUp ? 'Creating Account...' : 'Signing In...') : (isSigningUp ? 'Create Account' : 'Sign In')}
+                {isLoading ? (isSigningUp ? 'Submitting...' : 'Signing In...') : (isSigningUp ? 'Request Access' : 'Sign In')}
                 {!isLoading && <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />}
               </button>
             </form>
@@ -296,7 +303,7 @@ export default function App() {
                 }}
                 className="mt-2 text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
               >
-                {isSigningUp ? "Sign In instead" : "Create an account"}
+                {isSigningUp ? "Sign In instead" : "Request Access"}
               </button>
             </div>
             
@@ -335,8 +342,8 @@ export default function App() {
           <Announcements currentUser={auth.user} />
         )}
 
-        {activeTab === 'users' && auth.user.role === UserRole.ADMIN && (
-          <UserManagement />
+        {activeTab === 'users' && (auth.user.role === UserRole.ADMIN || auth.user.role === UserRole.MANAGER) && (
+          <UserManagement currentUser={auth.user} />
         )}
 
         {activeTab === 'my-feedback' && (

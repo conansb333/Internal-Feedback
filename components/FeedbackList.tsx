@@ -2,9 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { User, Feedback, UserRole, ResolutionStatus, ApprovalStatus, Priority } from '../types';
 import { storageService } from '../services/storageService';
-import { geminiService } from '../services/geminiService';
 import { Button } from './Button';
-import { Check, Eye, Search, FileText, Calendar, Tag, ThumbsUp, ThumbsDown, MessageSquare, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Check, Eye, Search, FileText, Calendar, Tag, ThumbsUp, ThumbsDown, MessageSquare, CheckCircle2, ShieldAlert, Download, FileSpreadsheet } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface FeedbackListProps {
   currentUser: User;
@@ -39,9 +40,6 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
     let allFeedbacks = await storageService.getFeedbacks();
     
     if (mode === 'mine') {
-      // Filter logic:
-      // 1. If I am the SENDER, I can see everything I sent (Pending, Approved, Rejected)
-      // 2. If I am the RECEIVER, I should ONLY see Approved reports (verified).
       allFeedbacks = allFeedbacks.filter(
         f => f.fromUserId === currentUser.id || (f.toUserId === currentUser.id && f.approvalStatus === ApprovalStatus.APPROVED)
       );
@@ -53,12 +51,10 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
 
   const getUserName = (id: string) => users.find(u => u.id === id)?.name || 'Unknown';
   
-  // Can view all / manage reports: Manager and Admin
   const isManagerOrAdmin = currentUser.role === UserRole.MANAGER || currentUser.role === UserRole.ADMIN;
 
   const updateStatus = async (feedback: Feedback, newStatus: ResolutionStatus) => {
     await storageService.saveFeedback({ ...feedback, resolutionStatus: newStatus });
-    
     storageService.saveLog({
         id: Date.now().toString(),
         userId: currentUser.id,
@@ -68,18 +64,15 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
         details: `Updated report status to ${newStatus} (ID: ${feedback.id})`,
         timestamp: Date.now()
     });
-
     loadData();
   };
 
-  // Simple approval for quick actions in 'All Reports' view, though detailed approval with notes is in LatestReports
   const updateApproval = async (feedback: Feedback, status: ApprovalStatus) => {
     await storageService.saveFeedback({ 
       ...feedback, 
       approvalStatus: status,
-      managerName: currentUser.name // Save manager name on quick action too
+      managerName: currentUser.name
     });
-    
     storageService.saveLog({
         id: Date.now().toString(),
         userId: currentUser.id,
@@ -89,8 +82,74 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
         details: `Marked report as ${status} (ID: ${feedback.id})`,
         timestamp: Date.now()
     });
-
     loadData();
+  };
+
+  // --- EXPORT FUNCTIONALITY ---
+
+  const handleExportCSV = () => {
+    const headers = ['ID', 'Date', 'From', 'To', 'Type', 'Description', 'Priority', 'Approval', 'Status', 'Order #', 'Case #'];
+    
+    const rows = filteredFeedbacks.map(f => [
+      f.id,
+      f.reportDate,
+      getUserName(f.fromUserId),
+      getUserName(f.toUserId),
+      f.processType,
+      `"${f.faultDescription.replace(/"/g, '""')}"`, // Escape quotes
+      f.priority,
+      f.approvalStatus,
+      f.resolutionStatus,
+      f.orderNumber || '',
+      f.caseNumber || ''
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `feedback_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(18);
+    doc.text(mode === 'all' ? 'All Feedback Reports' : 'My Feedback Reports', 14, 22);
+    
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleDateString()} | Count: ${filteredFeedbacks.length}`, 14, 28);
+
+    const tableColumn = ["Date", "From", "To", "Type", "Priority", "Status", "Description"];
+    const tableRows = filteredFeedbacks.map(f => [
+      f.reportDate,
+      getUserName(f.fromUserId),
+      getUserName(f.toUserId),
+      f.processType,
+      f.priority,
+      f.approvalStatus,
+      f.faultDescription.substring(0, 50) + (f.faultDescription.length > 50 ? '...' : '')
+    ]);
+
+    // @ts-ignore - autoTable types are sometimes tricky with esm.sh
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 35,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [79, 70, 229] }, // Indigo-600
+    });
+
+    doc.save(`feedback_report_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const PriorityBadge = ({ p }: { p: Priority }) => {
@@ -120,7 +179,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
   };
 
   const ApprovalBadge = ({ s }: { s: ApprovalStatus }) => {
-      if (s === ApprovalStatus.APPROVED) return null; // Don't show badge if normal
+      if (s === ApprovalStatus.APPROVED) return null;
       if (s === ApprovalStatus.PENDING) {
           return (
               <span className="px-2 py-0.5 rounded-full text-xs font-bold border bg-yellow-100 border-yellow-300 text-yellow-800 dark:bg-yellow-900/40 dark:border-yellow-900/60 dark:text-yellow-400 flex items-center gap-1">
@@ -140,21 +199,32 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
 
   return (
     <div className="p-8 h-full overflow-y-auto">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-4">
         <div>
            <h2 className="text-3xl font-bold text-slate-900 dark:text-white">{mode === 'all' ? 'All Reports' : 'My Reports'}</h2>
            <p className="text-slate-500 dark:text-slate-400">Manage and track feedback progress.</p>
         </div>
         
-        <div className="relative w-full md:w-72">
-           <input 
-             type="text" 
-             placeholder="Search reports..." 
-             value={searchTerm}
-             onChange={(e) => setSearchTerm(e.target.value)}
-             className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm"
-           />
-           <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 dark:text-slate-500" />
+        <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
+            <div className="relative flex-1 md:w-64">
+                <input 
+                    type="text" 
+                    placeholder="Search reports..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm"
+                />
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 dark:text-slate-500" />
+            </div>
+            
+            <div className="flex gap-2">
+                <Button onClick={handleExportCSV} variant="secondary" className="whitespace-nowrap" title="Export CSV">
+                    <FileSpreadsheet className="w-4 h-4 mr-2" /> CSV
+                </Button>
+                <Button onClick={handleExportPDF} variant="secondary" className="whitespace-nowrap" title="Export PDF">
+                    <FileText className="w-4 h-4 mr-2" /> PDF
+                </Button>
+            </div>
         </div>
       </div>
 
@@ -171,32 +241,18 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
         
         {filteredFeedbacks.map(item => {
           const isSender = item.fromUserId === currentUser.id;
-          
-          // Anonymization Logic:
-          // If current user is NOT a manager/admin AND they are NOT the sender (meaning they are the receiver),
-          // hide the sender's name.
           let fromName = getUserName(item.fromUserId);
           if (!isManagerOrAdmin && !isSender) {
              fromName = "Anonymous";
           }
-          
           const toName = getUserName(item.toUserId);
-
-          // If rejected AND I am NOT the sender, fade it out (irrelevant to others mostly). 
-          // If I AM the sender, keep it full opacity so I see the rejection.
           const isFaded = item.approvalStatus === ApprovalStatus.REJECTED && !isSender;
-
-          // Note Visibility Logic
           const showReporterNote = (isSender || isManagerOrAdmin) && (item.managerNoteToReporter || item.managerNotes);
-          const showReceiverNote = (!isSender || isManagerOrAdmin) && item.managerNoteToReceiver; // Receiver is !isSender in this context of valid reports
-
-          // Legacy fallback for old reports that only had managerNotes
+          const showReceiverNote = (!isSender || isManagerOrAdmin) && item.managerNoteToReceiver; 
           const noteForReporter = item.managerNoteToReporter || item.managerNotes;
 
           return (
             <div key={item.id} className={`bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-md transition-shadow duration-200 ${isFaded ? 'opacity-50 grayscale' : ''}`}>
-              
-              {/* Header Strip */}
               <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-4">
                    <div className="flex -space-x-2">
@@ -243,7 +299,6 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
               </div>
 
               <div className="p-6 grid grid-cols-1 lg:grid-cols-4 gap-8">
-                {/* Main Content */}
                 <div className="lg:col-span-3 space-y-6">
                    <div>
                       <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Fault Description</h4>
@@ -267,126 +322,67 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
                      </div>
                    )}
                    
-                   {/* Manager Notes Logic */}
                    {(showReporterNote || showReceiverNote) && (
-                       <div className={`mt-4 rounded-xl p-4 border-l-4 shadow-sm animate-in fade-in slide-in-from-top-2 ${
-                           item.approvalStatus === ApprovalStatus.APPROVED 
-                             ? 'bg-green-50 dark:bg-green-900/10 border-green-500 border-y-0 border-r-0' 
-                             : 'bg-red-50 dark:bg-red-900/10 border-red-500 border-y-0 border-r-0'
-                       }`}>
-                          <h4 className={`text-sm font-bold flex items-center gap-2 mb-2 ${
-                              item.approvalStatus === ApprovalStatus.APPROVED ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'
-                          }`}>
+                       <div className={`mt-4 rounded-xl p-4 border-l-4 shadow-sm ${item.approvalStatus === ApprovalStatus.APPROVED ? 'bg-green-50 dark:bg-green-900/10 border-green-500 border-y-0 border-r-0' : 'bg-red-50 dark:bg-red-900/10 border-red-500 border-y-0 border-r-0'}`}>
+                          <h4 className={`text-sm font-bold flex items-center gap-2 mb-2 ${item.approvalStatus === ApprovalStatus.APPROVED ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'}`}>
                              <MessageSquare className="w-4 h-4" />
                              {item.approvalStatus === ApprovalStatus.APPROVED ? 'Manager Coaching' : 'Rejection Reason'}
                           </h4>
-                          
                           <div className="space-y-3">
                              {showReporterNote && (
                                 <div className={isManagerOrAdmin ? "pl-2 border-l-2 border-black/10 dark:border-white/10" : ""}>
                                    {isManagerOrAdmin && <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">To Reporter:</span>}
-                                   <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
-                                      {noteForReporter}
-                                   </p>
+                                   <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">{noteForReporter}</p>
                                 </div>
                              )}
-
                              {showReceiverNote && (
                                 <div className={isManagerOrAdmin ? "pl-2 border-l-2 border-black/10 dark:border-white/10" : ""}>
                                    {isManagerOrAdmin && <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">To Receiver:</span>}
-                                   <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
-                                      {item.managerNoteToReceiver}
-                                   </p>
+                                   <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">{item.managerNoteToReceiver}</p>
                                 </div>
                              )}
                           </div>
-
                           {item.managerName && (
                               <div className="mt-3 pt-2 border-t border-black/5 dark:border-white/10 flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
-                                 <CheckCircle2 className="w-3.5 h-3.5" />
-                                 Reviewed by: <span className="text-slate-700 dark:text-slate-300">{item.managerName}</span>
+                                 <CheckCircle2 className="w-3.5 h-3.5" /> Reviewed by: <span className="text-slate-700 dark:text-slate-300">{item.managerName}</span>
                               </div>
                           )}
                        </div>
                    )}
                 </div>
 
-                {/* Sidebar Metadata */}
                 <div className="lg:col-span-1 border-l border-slate-100 dark:border-slate-800 pl-0 lg:pl-6 space-y-5">
                    <div>
                       <span className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Process Type</span>
-                      <span className="inline-block px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-md text-xs font-medium border border-slate-200 dark:border-slate-700">
-                         {item.processType}
-                      </span>
+                      <span className="inline-block px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-md text-xs font-medium border border-slate-200 dark:border-slate-700">{item.processType}</span>
                    </div>
-                   
                    {item.scenarioTag && (
                      <div>
                         <span className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Scenario</span>
                         <div className="flex items-start gap-1.5 text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 p-2 rounded border border-slate-100 dark:border-slate-700">
-                          <Tag className="w-3.5 h-3.5 mt-0.5 text-slate-400 dark:text-slate-500 shrink-0" /> 
-                          {item.scenarioTag}
+                          <Tag className="w-3.5 h-3.5 mt-0.5 text-slate-400 dark:text-slate-500 shrink-0" /> {item.scenarioTag}
                         </div>
                      </div>
                    )}
-
                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
                       <span className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Reference Info</span>
                       <div className="space-y-2 text-xs">
-                         <div className="flex justify-between">
-                            <span className="text-slate-500 dark:text-slate-400">Case #</span>
-                            <span className="font-mono text-slate-700 dark:text-slate-300 font-medium">{item.caseNumber || 'N/A'}</span>
-                         </div>
-                         <div className="flex justify-between">
-                            <span className="text-slate-500 dark:text-slate-400">Resolved Date</span>
-                            <span className="font-mono text-slate-700 dark:text-slate-300 font-medium">{item.resolutionDate || 'Pending'}</span>
-                         </div>
+                         <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Case #</span><span className="font-mono text-slate-700 dark:text-slate-300 font-medium">{item.caseNumber || 'N/A'}</span></div>
+                         <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Resolved Date</span><span className="font-mono text-slate-700 dark:text-slate-300 font-medium">{item.resolutionDate || 'Pending'}</span></div>
                       </div>
                    </div>
-
-                   {/* Admin Controls */}
                    {isManagerOrAdmin && mode === 'all' && (
                       <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2">
-                         {/* Approval Controls */}
-                         {/* Note: Quick actions here don't show the note modal. For detailed notes, use Latest Activity */}
                          <div className="flex gap-2 mb-2">
-                             <Button
-                                onClick={() => updateApproval(item, ApprovalStatus.APPROVED)}
-                                disabled={item.approvalStatus === ApprovalStatus.APPROVED}
-                                className={`flex-1 text-xs justify-center ${item.approvalStatus === ApprovalStatus.APPROVED ? 'opacity-50' : 'bg-green-600 hover:bg-green-700 text-white'}`}
-                             >
-                                <ThumbsUp className="w-3.5 h-3.5 mr-1" /> Approve
-                             </Button>
-                             <Button
-                                onClick={() => updateApproval(item, ApprovalStatus.REJECTED)}
-                                disabled={item.approvalStatus === ApprovalStatus.REJECTED}
-                                variant="secondary"
-                                className={`flex-1 text-xs justify-center ${item.approvalStatus === ApprovalStatus.REJECTED ? 'opacity-50' : 'text-red-600 border-red-200 hover:bg-red-50'}`}
-                             >
-                                <ThumbsDown className="w-3.5 h-3.5 mr-1" /> Reject
-                             </Button>
+                             <Button onClick={() => updateApproval(item, ApprovalStatus.APPROVED)} disabled={item.approvalStatus === ApprovalStatus.APPROVED} className={`flex-1 text-xs justify-center ${item.approvalStatus === ApprovalStatus.APPROVED ? 'opacity-50' : 'bg-green-600 hover:bg-green-700 text-white'}`}><ThumbsUp className="w-3.5 h-3.5 mr-1" /> Approve</Button>
+                             <Button onClick={() => updateApproval(item, ApprovalStatus.REJECTED)} disabled={item.approvalStatus === ApprovalStatus.REJECTED} variant="secondary" className={`flex-1 text-xs justify-center ${item.approvalStatus === ApprovalStatus.REJECTED ? 'opacity-50' : 'text-red-600 border-red-200 hover:bg-red-50'}`}><ThumbsDown className="w-3.5 h-3.5 mr-1" /> Reject</Button>
                          </div>
-
-                         {/* Resolution Controls - Only if Approved */}
                          {item.approvalStatus === ApprovalStatus.APPROVED && (
-                            <>
-                                {item.resolutionStatus !== ResolutionStatus.CLOSED_RESOLVED ? (
-                                    <Button 
-                                       onClick={() => updateStatus(item, ResolutionStatus.CLOSED_RESOLVED)}
-                                       className="w-full text-xs justify-center bg-indigo-600 hover:bg-indigo-700 text-white"
-                                    >
-                                       <Check className="w-3.5 h-3.5 mr-1.5" /> Mark Resolved
-                                    </Button>
-                                ) : (
-                                    <Button 
-                                       onClick={() => updateStatus(item, ResolutionStatus.IN_PROGRESS)}
-                                       variant="secondary"
-                                       className="w-full text-xs justify-center"
-                                    >
-                                       <Eye className="w-3.5 h-3.5 mr-1.5" /> Re-open Case
-                                    </Button>
-                                )}
-                            </>
+                            item.resolutionStatus !== ResolutionStatus.CLOSED_RESOLVED ? (
+                                <Button onClick={() => updateStatus(item, ResolutionStatus.CLOSED_RESOLVED)} className="w-full text-xs justify-center bg-indigo-600 hover:bg-indigo-700 text-white"><Check className="w-3.5 h-3.5 mr-1.5" /> Mark Resolved</Button>
+                            ) : (
+                                <Button onClick={() => updateStatus(item, ResolutionStatus.IN_PROGRESS)} variant="secondary" className="w-full text-xs justify-center"><Eye className="w-3.5 h-3.5 mr-1.5" /> Re-open Case</Button>
+                            )
                          )}
                       </div>
                    )}

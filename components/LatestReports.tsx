@@ -1,10 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { storageService } from '../services/storageService';
-import { geminiService } from '../services/geminiService';
 import { Feedback, User, ResolutionStatus, Priority, ApprovalStatus } from '../types';
 import { Button } from './Button';
-import { Clock, ArrowRight, Tag, X, Calendar, FileText, Check, Eye, ThumbsUp, ThumbsDown, AlertOctagon, Filter, MessageSquare } from 'lucide-react';
+import { Clock, Check, X, Calendar, FileText, Eye, ThumbsUp, ThumbsDown, AlertOctagon, Filter, MessageSquare, ChevronDown, ChevronUp, Search } from 'lucide-react';
 
 interface LatestReportsProps {
   currentUser?: User;
@@ -18,13 +17,12 @@ export const LatestReports: React.FC<LatestReportsProps> = ({ currentUser }) => 
   
   // Action State for Manager Notes
   const [actionData, setActionData] = useState<{ type: 'APPROVE' | 'REJECT', report: Feedback } | null>(null);
-  
-  // Two separate note states
   const [noteToReporter, setNoteToReporter] = useState('');
   const [noteToReceiver, setNoteToReceiver] = useState('');
 
   // Filter State
-  const [filterMode, setFilterMode] = useState<'all' | 'pending' | 'high_priority'>('all');
+  const [filterMode, setFilterMode] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadData();
@@ -32,13 +30,19 @@ export const LatestReports: React.FC<LatestReportsProps> = ({ currentUser }) => 
 
   useEffect(() => {
     let result = feedbacks;
-    if (filterMode === 'pending') {
-      result = feedbacks.filter(f => f.approvalStatus === ApprovalStatus.PENDING);
-    } else if (filterMode === 'high_priority') {
-      result = feedbacks.filter(f => f.priority === Priority.HIGH);
+    if (filterMode !== 'all') {
+      result = feedbacks.filter(f => f.approvalStatus.toLowerCase() === filterMode);
+    }
+    if (searchQuery) {
+        const lowerQ = searchQuery.toLowerCase();
+        result = result.filter(f => 
+            f.faultDescription.toLowerCase().includes(lowerQ) ||
+            getUserName(f.fromUserId).toLowerCase().includes(lowerQ) ||
+            getUserName(f.toUserId).toLowerCase().includes(lowerQ)
+        );
     }
     setFilteredFeedbacks(result);
-  }, [filterMode, feedbacks]);
+  }, [filterMode, searchQuery, feedbacks]);
 
   const loadData = async () => {
     const rawFeedbacks = await storageService.getFeedbacks();
@@ -52,20 +56,8 @@ export const LatestReports: React.FC<LatestReportsProps> = ({ currentUser }) => 
 
   const getUserName = (id: string) => users.find(u => u.id === id)?.name || 'Unknown';
 
-  const formatTime = (timestamp: number) => {
-      const date = new Date(timestamp);
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const getDayLabel = (timestamp: number) => {
-      const date = new Date(timestamp);
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-
-      if (date.toDateString() === today.toDateString()) return 'Today';
-      if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
-      return date.toLocaleDateString();
+  const formatTimeCompact = (timestamp: number) => {
+      return new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
   const updateResolutionStatus = async (feedback: Feedback, newStatus: ResolutionStatus) => {
@@ -75,15 +67,12 @@ export const LatestReports: React.FC<LatestReportsProps> = ({ currentUser }) => 
     setSelectedReport(updated);
   };
 
-  // Initiate Approval/Rejection Flow
   const initiateAction = (report: Feedback, type: 'APPROVE' | 'REJECT') => {
     setActionData({ type, report });
-    // Reset inputs
     setNoteToReporter('');
     setNoteToReceiver('');
   };
 
-  // Confirm Action
   const confirmAction = async () => {
     if (!actionData) return;
     
@@ -98,7 +87,6 @@ export const LatestReports: React.FC<LatestReportsProps> = ({ currentUser }) => 
 
     await storageService.saveFeedback(updated);
     
-    // Log
     const actionLog = actionData.type === 'APPROVE' ? 'APPROVE_REPORT' : 'REJECT_REPORT';
     storageService.saveLog({
         id: Date.now().toString(),
@@ -113,158 +101,139 @@ export const LatestReports: React.FC<LatestReportsProps> = ({ currentUser }) => 
     setFeedbacks(prev => prev.map(f => f.id === actionData.report.id ? updated : f));
     setSelectedReport(updated);
     setActionData(null);
-    setNoteToReporter('');
-    setNoteToReceiver('');
   };
-
-  // Group by day
-  const groupedFeedbacks: Record<string, Feedback[]> = {};
-  filteredFeedbacks.slice(0, 50).forEach(f => {
-      const day = getDayLabel(f.timestamp);
-      if (!groupedFeedbacks[day]) groupedFeedbacks[day] = [];
-      groupedFeedbacks[day].push(f);
-  });
 
   return (
     <div className="p-8 h-full overflow-y-auto">
-      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="mb-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
         <div>
            <h2 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
                <Clock className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
                Latest Activity
            </h2>
-           <p className="text-slate-500 dark:text-slate-400 mt-1">Real-time timeline. Triage pending approvals here.</p>
+           <p className="text-slate-500 dark:text-slate-400 mt-1">Real-time triage queue. Review and approve reports efficiently.</p>
         </div>
         
-        {/* Filter Dropdown */}
-        <div className="flex items-center gap-2">
-           <Filter className="w-4 h-4 text-slate-400" />
-           <select 
-             value={filterMode}
-             onChange={(e) => setFilterMode(e.target.value as any)}
-             className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-           >
-             <option value="all">Show All</option>
-             <option value="pending">Pending Approval</option>
-             <option value="high_priority">High Priority Only</option>
-           </select>
+        <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+           <div className="relative">
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+                <input 
+                    type="text" 
+                    placeholder="Search activity..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-full sm:w-64 focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+           </div>
+           
+           <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1">
+             {(['all', 'pending', 'approved', 'rejected'] as const).map(mode => (
+                 <button
+                    key={mode}
+                    onClick={() => setFilterMode(mode)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-md capitalize transition-colors ${
+                        filterMode === mode 
+                        ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' 
+                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                    }`}
+                 >
+                    {mode}
+                 </button>
+             ))}
+           </div>
         </div>
       </div>
 
-      <div className="w-full pb-20">
-        {Object.entries(groupedFeedbacks).map(([day, items]) => (
-            <div key={day} className="mb-0">
-                <div className="sticky top-0 bg-slate-100 dark:bg-slate-950 py-3 z-20 backdrop-blur-md bg-opacity-95 dark:bg-opacity-95 flex items-center gap-4 border-b border-transparent">
-                    <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider pl-4">
-                        {day}
-                    </h3>
-                    <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
-                </div>
-                
-                <div className="relative border-l-2 border-slate-200 dark:border-slate-800 ml-4 space-y-6 pt-6 pb-10">
-                    {items.map((item) => (
-                        <div key={item.id} className="ml-8 relative group">
-                            {/* Timeline Dot */}
-                            <div className={`absolute -left-[39px] top-6 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 z-10 shadow-sm ${
-                                item.approvalStatus === ApprovalStatus.REJECTED ? 'bg-slate-300 dark:bg-slate-700' :
-                                item.approvalStatus === ApprovalStatus.PENDING ? 'bg-yellow-400 animate-pulse' :
-                                item.priority === Priority.HIGH ? 'bg-red-500' : 
-                                item.priority === Priority.MEDIUM ? 'bg-orange-500' : 'bg-green-500'
-                            }`}></div>
-
-                            {/* Card */}
-                            <div 
-                                onClick={() => setSelectedReport(item)}
-                                className={`bg-white dark:bg-slate-900 p-5 rounded-2xl border shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group ${
-                                    item.approvalStatus === ApprovalStatus.REJECTED ? 'border-slate-200 dark:border-slate-800 opacity-75' :
-                                    item.approvalStatus === ApprovalStatus.PENDING ? 'border-yellow-200 dark:border-yellow-900/50 hover:border-yellow-400 bg-yellow-50/10' :
-                                    'border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700'
-                                }`}
-                            >
-                                {/* Card Header Row */}
-                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-                                    <div className="flex items-center gap-3">
-                                        <span className="font-mono text-xs text-slate-400">{formatTime(item.timestamp)}</span>
-                                        
-                                        {/* Status Badge */}
-                                        {item.approvalStatus === ApprovalStatus.PENDING ? (
-                                           <span className="text-[10px] uppercase px-2 py-0.5 rounded-full font-bold bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800">
-                                               Review Needed
-                                           </span>
-                                        ) : item.approvalStatus === ApprovalStatus.REJECTED ? (
-                                           <span className="text-[10px] uppercase px-2 py-0.5 rounded-full font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                                               Rejected
-                                           </span>
-                                        ) : (
-                                            <div className="flex gap-2">
-                                               <span className={`text-[10px] uppercase px-2 py-0.5 rounded-full font-bold border ${
-                                                   item.priority === Priority.HIGH ? 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-900' :
-                                                   item.priority === Priority.MEDIUM ? 'bg-orange-50 text-orange-600 border-orange-100 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-900' :
-                                                   'bg-green-50 text-green-600 border-green-100 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900'
-                                               }`}>
-                                                   {item.priority}
-                                               </span>
-                                               <span className={`text-[10px] uppercase px-2 py-0.5 rounded-full font-bold border ${
-                                                   item.resolutionStatus === ResolutionStatus.OPEN ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-900' :
-                                                   item.resolutionStatus === ResolutionStatus.IN_PROGRESS ? 'bg-purple-50 text-purple-600 border-purple-100 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-900' :
-                                                   'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
-                                               }`}>
-                                                   {item.resolutionStatus}
-                                               </span>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Order / Case Info */}
-                                    {(item.orderNumber || item.caseNumber) && (
-                                      <div className="flex items-center gap-3 text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded border border-slate-100 dark:border-slate-700">
-                                         {item.orderNumber && <span>{item.orderNumber}</span>}
-                                         {item.orderNumber && item.caseNumber && <span className="text-slate-300">|</span>}
-                                         {item.caseNumber && <span>{item.caseNumber}</span>}
+      {/* TABLE VIEW */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                  <thead>
+                      <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                          <th className="px-6 py-4">Date</th>
+                          <th className="px-6 py-4">Reporter</th>
+                          <th className="px-6 py-4">Receiver</th>
+                          <th className="px-6 py-4">Type</th>
+                          <th className="px-6 py-4">Priority</th>
+                          <th className="px-6 py-4">Status</th>
+                          <th className="px-6 py-4 text-right">Actions</th>
+                      </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {filteredFeedbacks.map(item => (
+                          <tr 
+                            key={item.id} 
+                            onClick={() => setSelectedReport(item)}
+                            className="hover:bg-indigo-50/50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
+                          >
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-500 dark:text-slate-400">
+                                  {formatTimeCompact(item.timestamp)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex items-center gap-2">
+                                      <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-[10px] font-bold">
+                                          {getUserName(item.fromUserId).charAt(0)}
                                       </div>
-                                    )}
-                                </div>
-
-                                {/* Body */}
-                                <div className="mb-3">
-                                   <div className="flex items-center gap-2 text-sm text-slate-900 dark:text-white font-bold mb-1">
-                                      <span className="text-indigo-600 dark:text-indigo-400">{getUserName(item.fromUserId)}</span>
-                                      <ArrowRight className="w-3 h-3 text-slate-300 dark:text-slate-600" />
-                                      <span>{getUserName(item.toUserId)}</span>
-                                   </div>
-                                   <div className="text-xs text-slate-500 mb-2 font-medium bg-slate-50 dark:bg-slate-800/50 inline-block px-2 py-0.5 rounded">
+                                      <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{getUserName(item.fromUserId)}</span>
+                                  </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex items-center gap-2">
+                                      <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center text-[10px] font-bold">
+                                          {getUserName(item.toUserId).charAt(0)}
+                                      </div>
+                                      <span className="text-sm text-slate-600 dark:text-slate-300">{getUserName(item.toUserId)}</span>
+                                  </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className="inline-block max-w-[150px] truncate text-sm text-slate-600 dark:text-slate-300" title={item.processType}>
                                       {item.processType}
-                                   </div>
-                                   <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed line-clamp-2">
-                                      {item.faultDescription}
-                                   </p>
-                                </div>
-
-                                {/* Footer */}
-                                {item.scenarioTag && (
-                                    <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-500 border-t border-slate-100 dark:border-slate-800/50 pt-2 mt-2">
-                                        <Tag className="w-3 h-3" />
-                                        {item.scenarioTag}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        ))}
-
-        {filteredFeedbacks.length === 0 && (
-            <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-                <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
-                   <Clock className="w-6 h-6 text-slate-300" />
-                </div>
-                <p className="text-slate-500 dark:text-slate-400">No reports found matching criteria.</p>
-            </div>
-        )}
+                                  </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${
+                                      item.priority === Priority.HIGH ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-900/50' :
+                                      item.priority === Priority.MEDIUM ? 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-900/50' :
+                                      'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-900/50'
+                                  }`}>
+                                      {item.priority}
+                                  </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                  {item.approvalStatus === ApprovalStatus.PENDING ? (
+                                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-900/50 animate-pulse">
+                                          Review Needed
+                                      </span>
+                                  ) : item.approvalStatus === ApprovalStatus.APPROVED ? (
+                                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900/50">
+                                          Approved
+                                      </span>
+                                  ) : (
+                                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700">
+                                          Rejected
+                                      </span>
+                                  )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-right">
+                                  <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      View Details &rarr;
+                                  </span>
+                              </td>
+                          </tr>
+                      ))}
+                      {filteredFeedbacks.length === 0 && (
+                          <tr>
+                              <td colSpan={7} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400 italic">
+                                  No reports found matching your filters.
+                              </td>
+                          </tr>
+                      )}
+                  </tbody>
+              </table>
+          </div>
       </div>
 
-      {/* REPORT DETAIL MODAL */}
+      {/* REPORT DETAIL MODAL (Reused Logic) */}
       {selectedReport && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
               <div 
@@ -288,7 +257,6 @@ export const LatestReports: React.FC<LatestReportsProps> = ({ currentUser }) => 
                             </p>
 
                             <div className="space-y-4 mb-6">
-                                {/* Note to Reporter */}
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
                                         Note to Reporter {actionData.type === 'APPROVE' ? '(Optional)' : '(Required)'}
@@ -303,7 +271,6 @@ export const LatestReports: React.FC<LatestReportsProps> = ({ currentUser }) => 
                                     />
                                 </div>
 
-                                {/* Note to Receiver (Only on Approval) */}
                                 {actionData.type === 'APPROVE' && (
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
@@ -397,86 +364,15 @@ export const LatestReports: React.FC<LatestReportsProps> = ({ currentUser }) => 
                           </div>
                       </div>
 
-                      {/* Display Manager Notes (Detail View) */}
-                      {(selectedReport.managerNoteToReporter || selectedReport.managerNoteToReceiver || selectedReport.managerNotes) && (
-                          <div className={`p-4 rounded-xl border ${
-                              selectedReport.approvalStatus === ApprovalStatus.APPROVED 
-                                ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800' 
-                                : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
-                          }`}>
-                             <h4 className={`text-sm font-bold mb-3 flex items-center gap-2 ${
-                                  selectedReport.approvalStatus === ApprovalStatus.APPROVED ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
-                             }`}>
-                                <MessageSquare className="w-4 h-4" />
-                                Manager Feedback
-                             </h4>
-                             
-                             <div className="space-y-3">
-                                {(selectedReport.managerNoteToReporter || selectedReport.managerNotes) && (
-                                   <div className="bg-white/50 dark:bg-black/20 p-2 rounded">
-                                       <span className="text-xs font-bold uppercase opacity-70 block mb-1">To Reporter:</span>
-                                       <p className="text-sm text-slate-700 dark:text-slate-300">
-                                         {selectedReport.managerNoteToReporter || selectedReport.managerNotes}
-                                       </p>
-                                   </div>
-                                )}
-
-                                {selectedReport.managerNoteToReceiver && (
-                                   <div className="bg-white/50 dark:bg-black/20 p-2 rounded">
-                                       <span className="text-xs font-bold uppercase opacity-70 block mb-1">To Receiver:</span>
-                                       <p className="text-sm text-slate-700 dark:text-slate-300">
-                                         {selectedReport.managerNoteToReceiver}
-                                       </p>
-                                   </div>
-                                )}
-                             </div>
-
-                             {selectedReport.managerName && (
-                                <p className="text-xs mt-3 text-slate-400 dark:text-slate-500 font-medium">
-                                   Reviewed by: {selectedReport.managerName}
-                                </p>
-                             )}
-                          </div>
-                      )}
-
-                      {/* From/To Section */}
-                      <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
-                          <div className="flex-1">
-                              <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Reporter</span>
-                              <div className="font-semibold text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-xs">
-                                    {getUserName(selectedReport.fromUserId).charAt(0)}
-                                  </div>
-                                  {getUserName(selectedReport.fromUserId)}
-                              </div>
-                          </div>
-                          <ArrowRight className="text-slate-300 dark:text-slate-600" />
-                          <div className="flex-1 text-right">
-                              <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Subject</span>
-                              <div className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2 justify-end">
-                                  {getUserName(selectedReport.toUserId)}
-                                  <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs">
-                                    {getUserName(selectedReport.toUserId).charAt(0)}
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
-
-                      {/* Main Info */}
+                      {/* Info Sections */}
                       <div className="grid grid-cols-2 gap-4 text-sm">
                          <div>
-                            <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Process Type</span>
-                            <span className="inline-block px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-md font-medium text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                                {selectedReport.processType}
-                            </span>
+                            <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Reporter</span>
+                            <span className="font-medium text-slate-900 dark:text-white">{getUserName(selectedReport.fromUserId)}</span>
                          </div>
                          <div>
-                            <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Scenario</span>
-                            <span className="text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                                {selectedReport.scenarioTag ? (
-                                    <><Tag className="w-3.5 h-3.5" /> {selectedReport.scenarioTag}</>
-                                ) : <span className="text-slate-400 italic">None</span>}
-                            </span>
+                            <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Subject</span>
+                            <span className="font-medium text-slate-900 dark:text-white">{getUserName(selectedReport.toUserId)}</span>
                          </div>
                       </div>
 
@@ -487,7 +383,6 @@ export const LatestReports: React.FC<LatestReportsProps> = ({ currentUser }) => 
                                   {selectedReport.faultDescription}
                               </p>
                           </div>
-
                           {selectedReport.feedbackContent && (
                               <div>
                                   <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-2">Feedback Provided</h4>
@@ -496,18 +391,8 @@ export const LatestReports: React.FC<LatestReportsProps> = ({ currentUser }) => 
                                   </p>
                               </div>
                           )}
-                          
-                          {selectedReport.additionalNotes && (
-                              <div>
-                                  <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-2">Additional Notes</h4>
-                                  <p className="text-slate-500 dark:text-slate-400 text-sm italic">
-                                      {selectedReport.additionalNotes}
-                                  </p>
-                              </div>
-                          )}
                       </div>
 
-                      {/* Metadata Grid */}
                       <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                           <div>
                               <span className="block text-xs text-slate-400 mb-1">Order #</span>
@@ -531,29 +416,17 @@ export const LatestReports: React.FC<LatestReportsProps> = ({ currentUser }) => 
                       </div>
                   </div>
 
-                  {/* Modal Footer / Actions */}
                   {selectedReport.approvalStatus === ApprovalStatus.APPROVED && (
                     <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center sticky bottom-0 z-10">
-                        <div className="text-xs text-slate-400">
-                            ID: {selectedReport.id}
-                        </div>
+                        <div className="text-xs text-slate-400">ID: {selectedReport.id}</div>
                         <div className="flex gap-3">
                             {selectedReport.resolutionStatus === ResolutionStatus.CLOSED_RESOLVED ? (
-                                <Button 
-                                    variant="secondary" 
-                                    onClick={() => updateResolutionStatus(selectedReport, ResolutionStatus.IN_PROGRESS)}
-                                    className="text-xs"
-                                >
-                                    <Eye className="w-3.5 h-3.5 mr-2" />
-                                    Re-open Case
+                                <Button variant="secondary" onClick={() => updateResolutionStatus(selectedReport, ResolutionStatus.IN_PROGRESS)} className="text-xs">
+                                    <Eye className="w-3.5 h-3.5 mr-2" /> Re-open Case
                                 </Button>
                             ) : (
-                                <Button 
-                                    onClick={() => updateResolutionStatus(selectedReport, ResolutionStatus.CLOSED_RESOLVED)}
-                                    className="text-xs bg-indigo-600 text-white hover:bg-indigo-700"
-                                >
-                                    <Check className="w-3.5 h-3.5 mr-2" />
-                                    Mark as Resolved
+                                <Button onClick={() => updateResolutionStatus(selectedReport, ResolutionStatus.CLOSED_RESOLVED)} className="text-xs bg-indigo-600 text-white hover:bg-indigo-700">
+                                    <Check className="w-3.5 h-3.5 mr-2" /> Mark as Resolved
                                 </Button>
                             )}
                         </div>

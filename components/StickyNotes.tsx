@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, Note, NoteColor, NoteFontSize } from '../types';
 import { storageService } from '../services/storageService';
@@ -8,12 +9,12 @@ interface StickyNotesProps {
 }
 
 const COLORS: { [key in NoteColor]: string } = {
-  yellow: 'bg-yellow-200 text-yellow-900 dark:bg-yellow-500/80 dark:text-yellow-950',
-  blue: 'bg-blue-200 text-blue-900 dark:bg-blue-400/80 dark:text-blue-950',
-  green: 'bg-green-200 text-green-900 dark:bg-green-400/80 dark:text-green-950',
-  pink: 'bg-pink-200 text-pink-900 dark:bg-pink-400/80 dark:text-pink-950',
-  purple: 'bg-purple-200 text-purple-900 dark:bg-purple-400/80 dark:text-purple-950',
-  orange: 'bg-orange-200 text-orange-900 dark:bg-orange-400/80 dark:text-orange-950',
+  yellow: 'bg-yellow-200 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-100 border border-yellow-300 dark:border-yellow-700',
+  blue: 'bg-blue-200 text-blue-900 dark:bg-blue-900 dark:text-blue-100 border border-blue-300 dark:border-blue-700',
+  green: 'bg-green-200 text-green-900 dark:bg-green-900 dark:text-green-100 border border-green-300 dark:border-green-700',
+  pink: 'bg-pink-200 text-pink-900 dark:bg-pink-900 dark:text-pink-100 border border-pink-300 dark:border-pink-700',
+  purple: 'bg-purple-200 text-purple-900 dark:bg-purple-900 dark:text-purple-100 border border-purple-300 dark:border-purple-700',
+  orange: 'bg-orange-200 text-orange-900 dark:bg-orange-900 dark:text-orange-100 border border-orange-300 dark:border-orange-700',
 };
 
 const FONT_SIZES: { [key in NoteFontSize]: string } = {
@@ -36,8 +37,13 @@ export const StickyNotes: React.FC<StickyNotesProps> = ({ currentUser }) => {
   const loadNotes = async () => {
     setIsLoading(true);
     const data = await storageService.getNotes(currentUser.id);
-    setNotes(data);
+    setNotes(data.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)));
     setIsLoading(false);
+  };
+
+  const getRandomColor = (): NoteColor => {
+    const colors = Object.keys(COLORS) as NoteColor[];
+    return colors[Math.floor(Math.random() * colors.length)];
   };
 
   const addNote = async () => {
@@ -46,7 +52,7 @@ export const StickyNotes: React.FC<StickyNotesProps> = ({ currentUser }) => {
       userId: currentUser.id,
       title: '',
       content: '',
-      color: 'yellow',
+      color: getRandomColor(),
       fontSize: 'base',
       orderIndex: notes.length,
       timestamp: Date.now()
@@ -59,17 +65,17 @@ export const StickyNotes: React.FC<StickyNotesProps> = ({ currentUser }) => {
     const updatedNotes = notes.map(n => n.id === id ? { ...n, ...updates } : n);
     setNotes(updatedNotes);
     
-    // Debounce save in real app, but here we save immediately on control interaction
-    // For text inputs, it's better to debounce but we'll trust the user isn't spamming edits too fast
     const noteToSave = updatedNotes.find(n => n.id === id);
     if (noteToSave) {
-        await storageService.saveNote(noteToSave);
+        await storageService.saveNote({ ...noteToSave, ...updates });
     }
   };
 
   const deleteNote = async (id: string) => {
-    await storageService.deleteNote(id);
-    setNotes(notes.filter(n => n.id !== id));
+    if (confirm('Are you sure you want to delete this note?')) {
+        await storageService.deleteNote(id);
+        setNotes(notes.filter(n => n.id !== id));
+    }
   };
 
   // --- Drag and Drop Logic ---
@@ -77,33 +83,32 @@ export const StickyNotes: React.FC<StickyNotesProps> = ({ currentUser }) => {
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedNoteId(id);
     e.dataTransfer.effectAllowed = 'move';
-    // Transparent drag image hack if needed, but default is usually fine
+    e.dataTransfer.setData('text/plain', id); // Required for Firefox
   };
 
   const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault(); // Necessary to allow dropping
+    e.preventDefault(); 
   };
 
   const handleDrop = async (e: React.DragEvent, targetId: string) => {
     e.preventDefault();
     if (!draggedNoteId || draggedNoteId === targetId) return;
 
-    const oldIndex = notes.findIndex(n => n.id === draggedNoteId);
-    const newIndex = notes.findIndex(n => n.id === targetId);
+    const currentNotes = [...notes];
+    const oldIndex = currentNotes.findIndex(n => n.id === draggedNoteId);
+    const newIndex = currentNotes.findIndex(n => n.id === targetId);
     
     if (oldIndex === -1 || newIndex === -1) return;
 
-    const newNotes = [...notes];
-    const [movedItem] = newNotes.splice(oldIndex, 1);
-    newNotes.splice(newIndex, 0, movedItem);
+    const [movedItem] = currentNotes.splice(oldIndex, 1);
+    currentNotes.splice(newIndex, 0, movedItem);
 
     // Reassign order indices
-    const updatedNotes = newNotes.map((n, idx) => ({ ...n, orderIndex: idx }));
+    const updatedNotes = currentNotes.map((n, idx) => ({ ...n, orderIndex: idx }));
     setNotes(updatedNotes);
     setDraggedNoteId(null);
 
     // Persist new order
-    // In production, use a batch update. Here we loop.
     updatedNotes.forEach(n => storageService.saveNote(n));
   };
 
@@ -172,13 +177,17 @@ export const StickyNotes: React.FC<StickyNotesProps> = ({ currentUser }) => {
                   >
                       {/* Drag Handle & Header */}
                       <div className="flex items-center justify-between p-3 pb-0 cursor-move opacity-50 group-hover:opacity-100 transition-opacity">
-                         <GripHorizontal className="w-4 h-4 text-black/40" />
+                         <GripHorizontal className="w-4 h-4 opacity-50" />
                          <div className="flex gap-1">
                             {(['sm', 'base', 'lg', 'xl'] as NoteFontSize[]).map(size => (
                                 <button
                                   key={size}
-                                  onClick={() => updateNote(note.id, { fontSize: size })}
-                                  className={`p-1 rounded hover:bg-black/10 text-[10px] font-bold text-black/60 ${note.fontSize === size ? 'bg-black/10 ring-1 ring-black/20' : ''}`}
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateNote(note.id, { fontSize: size });
+                                  }}
+                                  className={`p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 text-[10px] font-bold opacity-60 hover:opacity-100 ${note.fontSize === size ? 'bg-black/10 dark:bg-white/10 ring-1 ring-black/20 dark:ring-white/20' : ''}`}
                                   title={`Size: ${size}`}
                                 >
                                   {size === 'sm' ? 'A' : size === 'base' ? 'A+' : size === 'lg' ? 'A++' : 'A#'}
@@ -192,6 +201,7 @@ export const StickyNotes: React.FC<StickyNotesProps> = ({ currentUser }) => {
                         <input 
                           type="text" 
                           value={note.title}
+                          onMouseDown={(e) => e.stopPropagation()} // Allow text selection without drag
                           onChange={(e) => updateNote(note.id, { title: e.target.value })}
                           className="bg-transparent border-none text-lg font-bold placeholder-current/50 focus:ring-0 w-full mb-2 p-0 focus:outline-none"
                           placeholder="Title..."
@@ -200,8 +210,9 @@ export const StickyNotes: React.FC<StickyNotesProps> = ({ currentUser }) => {
                         {/* Content Input */}
                         <textarea 
                           value={note.content}
+                          onMouseDown={(e) => e.stopPropagation()} // Allow text selection without drag
                           onChange={(e) => updateNote(note.id, { content: e.target.value })}
-                          className={`bg-transparent border-none flex-1 resize-none focus:ring-0 p-0 placeholder-current/50 leading-relaxed focus:outline-none ${FONT_SIZES[note.fontSize || 'base']}`}
+                          className={`bg-transparent border-none flex-1 resize-none focus:ring-0 p-0 placeholder-current/50 leading-relaxed focus:outline-none scrollbar-none ${FONT_SIZES[note.fontSize || 'base']}`}
                           placeholder="Type your note here..."
                         />
                       </div>
@@ -212,22 +223,28 @@ export const StickyNotes: React.FC<StickyNotesProps> = ({ currentUser }) => {
                               {(Object.keys(COLORS) as NoteColor[]).map(c => (
                                   <button
                                     key={c}
-                                    onClick={() => updateNote(note.id, { color: c })}
-                                    className={`w-5 h-5 rounded-full border border-black/10 transition-transform hover:scale-125 ${COLORS[c].split(' ')[0]} ${note.color === c ? 'ring-2 ring-black/20 scale-110' : ''}`}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        updateNote(note.id, { color: c });
+                                    }}
+                                    className={`w-5 h-5 rounded-full border border-black/10 transition-transform hover:scale-125 ${COLORS[c].split(' ')[0]} ${note.color === c ? 'ring-2 ring-black/20 dark:ring-white/30 scale-110' : ''}`}
                                     title={c}
                                   />
                               ))}
                           </div>
                           <button 
-                            onClick={() => deleteNote(note.id)}
-                            className="p-2 bg-black/5 hover:bg-black/10 rounded-full text-current transition-colors"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                deleteNote(note.id);
+                            }}
+                            className="p-2 bg-black/5 dark:bg-white/10 hover:bg-red-500 hover:text-white dark:hover:bg-red-500 rounded-full text-current transition-colors"
                             title="Delete"
                           >
                              <Trash2 className="w-4 h-4" />
                           </button>
                       </div>
-                      
-                      <div className="absolute top-0 right-0 w-8 h-8 bg-gradient-to-bl from-black/10 to-transparent rounded-bl-xl pointer-events-none opacity-50"></div>
                   </div>
               ))}
           </div>

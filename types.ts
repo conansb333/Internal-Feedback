@@ -11,6 +11,7 @@ export interface User {
   name: string;
   role: UserRole;
   password?: string; // In a real app, this would be hashed. Mocking here.
+  isApproved: boolean; // New field for admin approval
 }
 
 export const PROCESS_TYPES = [
@@ -141,6 +142,23 @@ export interface Note {
   color: NoteColor;
   fontSize: NoteFontSize;
   orderIndex: number;
+  timestamp: number;
+}
+
+export enum NotificationType {
+  NEW_REPORT = 'NEW_REPORT',
+  NEW_ANNOUNCEMENT = 'NEW_ANNOUNCEMENT',
+  REPORT_STATUS = 'REPORT_STATUS',
+  FEEDBACK_RECEIVED = 'FEEDBACK_RECEIVED',
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  isRead: boolean;
   timestamp: number;
 }
 

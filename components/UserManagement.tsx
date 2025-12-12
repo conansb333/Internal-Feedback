@@ -1,11 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { storageService } from '../services/storageService';
 import { Button } from './Button';
-import { Trash2, UserPlus, Shield, Check } from 'lucide-react';
+import { Trash2, UserPlus, Shield, Check, X, Clock, RefreshCw } from 'lucide-react';
 
-export const UserManagement: React.FC = () => {
+interface UserManagementProps {
+  currentUser: User;
+}
+
+export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) => {
   const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', username: '', password: '', role: UserRole.USER });
 
@@ -14,8 +20,43 @@ export const UserManagement: React.FC = () => {
   }, []);
 
   const loadUsers = async () => {
+    setLoading(true);
     const data = await storageService.getUsers();
-    setUsers(data);
+    
+    // Sort: Pending approvals first, then alphabetical
+    const sorted = data.sort((a, b) => {
+        if (!a.isApproved && b.isApproved) return -1;
+        if (a.isApproved && !b.isApproved) return 1;
+        return a.name.localeCompare(b.name);
+    });
+    setUsers(sorted);
+    setLoading(false);
+  };
+
+  const pendingUsers = users.filter(u => !u.isApproved);
+  const activeUsers = users.filter(u => u.isApproved);
+
+  const canManageUser = (target: User) => {
+      // Admins can manage everyone except other Admins (or themselves via this UI generally)
+      if (currentUser.role === UserRole.ADMIN) return target.role !== UserRole.ADMIN;
+      // Managers can ONLY manage standard Users (Colleagues)
+      if (currentUser.role === UserRole.MANAGER) return target.role === UserRole.USER;
+      return false;
+  };
+
+  const handleApprove = async (user: User) => {
+      await storageService.saveUser({ ...user, isApproved: true });
+      
+      storageService.saveLog({
+          id: Date.now().toString(),
+          userId: currentUser.id,
+          userName: currentUser.name,
+          userRole: currentUser.role,
+          action: 'APPROVE_USER',
+          details: `Approved access for user: ${user.name}`,
+          timestamp: Date.now()
+      });
+      loadUsers();
   };
 
   const handleDelete = async (id: string) => {
@@ -26,9 +67,9 @@ export const UserManagement: React.FC = () => {
         // Log Deletion
         storageService.saveLog({
             id: Date.now().toString(),
-            userId: 'ADMIN_ACTION', // Context specific
-            userName: 'Admin',
-            userRole: UserRole.ADMIN,
+            userId: currentUser.id,
+            userName: currentUser.name,
+            userRole: currentUser.role,
             action: 'DELETE_USER',
             details: `Deleted user: ${userToDelete?.name || 'Unknown'} (${userToDelete?.username})`,
             timestamp: Date.now()
@@ -44,16 +85,17 @@ export const UserManagement: React.FC = () => {
     e.preventDefault();
     const newUser: User = {
       id: Date.now().toString(),
-      ...formData
+      ...formData,
+      isApproved: true // Manually created users are auto-approved
     };
     await storageService.saveUser(newUser);
     
     // Log Creation
     storageService.saveLog({
         id: Date.now().toString(),
-        userId: 'ADMIN_ACTION',
-        userName: 'Admin',
-        userRole: UserRole.ADMIN,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userRole: currentUser.role,
         action: 'CREATE_USER',
         details: `Created new user: ${newUser.name} with role ${newUser.role}`,
         timestamp: Date.now()
@@ -72,9 +114,9 @@ export const UserManagement: React.FC = () => {
       // Log Role Change
       storageService.saveLog({
           id: Date.now().toString(),
-          userId: 'ADMIN_ACTION',
-          userName: 'Admin',
-          userRole: UserRole.ADMIN,
+          userId: currentUser.id,
+          userName: currentUser.name,
+          userRole: currentUser.role,
           action: 'UPDATE_ROLE',
           details: `Changed role for ${user.name} to ${newRole}`,
           timestamp: Date.now()
@@ -91,24 +133,77 @@ export const UserManagement: React.FC = () => {
            <h2 className="text-3xl font-bold text-slate-900 dark:text-white">User Management</h2>
            <p className="text-slate-500 dark:text-slate-400">Manage access and roles for your team.</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="shadow-lg shadow-indigo-200 dark:shadow-none">
-          <UserPlus className="w-4 h-4 mr-2" />
-          Add Team Member
-        </Button>
+        <div className="flex gap-2">
+            <button 
+                onClick={loadUsers} 
+                className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-indigo-600 transition-colors shadow-sm"
+                title="Refresh List"
+            >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            <Button onClick={() => setIsModalOpen(true)} className="shadow-lg shadow-indigo-200 dark:shadow-none">
+            <UserPlus className="w-4 h-4 mr-2" />
+            Add Team Member
+            </Button>
+        </div>
       </div>
 
+      {/* 1. PENDING APPROVALS SECTION (Prominent) */}
+      {pendingUsers.length > 0 && (
+          <div className="mb-8 animate-in slide-in-from-top-4 fade-in duration-300">
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 shadow-sm">
+                  <h3 className="text-lg font-bold text-amber-900 dark:text-amber-100 flex items-center gap-2 mb-4">
+                      <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                      Pending Access Requests ({pendingUsers.length})
+                  </h3>
+                  
+                  <div className="bg-white dark:bg-slate-900 rounded-xl border border-amber-100 dark:border-amber-800/50 overflow-hidden">
+                      {pendingUsers.map(user => (
+                          <div key={user.id} className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                              <div className="flex items-center gap-4 w-full sm:w-auto">
+                                  <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center text-amber-700 dark:text-amber-400 font-bold">
+                                      {user.name.charAt(0)}
+                                  </div>
+                                  <div>
+                                      <p className="font-bold text-slate-900 dark:text-white">{user.name}</p>
+                                      <p className="text-sm text-slate-500 dark:text-slate-400">@{user.username} • Requesting User Access</p>
+                                  </div>
+                              </div>
+                              <div className="flex gap-2 w-full sm:w-auto">
+                                  {canManageUser(user) && (
+                                    <>
+                                        <Button onClick={() => handleApprove(user)} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto text-sm py-2">
+                                            <Check className="w-4 h-4 mr-2" /> Approve
+                                        </Button>
+                                        <Button variant="danger" onClick={() => handleDelete(user.id)} className="w-full sm:w-auto text-sm py-2">
+                                            <X className="w-4 h-4 mr-2" /> Reject
+                                        </Button>
+                                    </>
+                                  )}
+                              </div>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* 2. ACTIVE USERS TABLE */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+            <h3 className="font-bold text-slate-800 dark:text-white text-sm">Active Team Members ({activeUsers.length})</h3>
+        </div>
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
-              <th className="px-6 py-5 font-bold text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider">Name</th>
-              <th className="px-6 py-5 font-bold text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider">Username</th>
-              <th className="px-6 py-5 font-bold text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider">Role</th>
-              <th className="px-6 py-5 font-bold text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider text-right">Actions</th>
+              <th className="px-6 py-4 font-bold text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider">Name</th>
+              <th className="px-6 py-4 font-bold text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider">Username</th>
+              <th className="px-6 py-4 font-bold text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider">Role</th>
+              <th className="px-6 py-4 font-bold text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {users.map(user => (
+            {activeUsers.map(user => (
               <tr key={user.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
                 <td className="px-6 py-4">
                   <div className="flex items-center">
@@ -129,28 +224,37 @@ export const UserManagement: React.FC = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  {user.role !== UserRole.ADMIN && (
+                  {canManageUser(user) && (
                     <div className="flex items-center justify-end gap-3">
-                      <select 
-                        value={user.role}
-                        onChange={(e) => handleRoleChange(user.id, e.target.value as UserRole)}
-                        className="text-xs border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-200 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-1.5"
-                      >
-                        <option value={UserRole.USER}>User (Colleague)</option>
-                        <option value={UserRole.MANAGER}>Manager</option>
-                      </select>
+                      {/* Only Admins can change roles */}
+                      {currentUser.role === UserRole.ADMIN && (
+                        <select 
+                          value={user.role}
+                          onChange={(e) => handleRoleChange(user.id, e.target.value as UserRole)}
+                          className="text-xs border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-200 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-1.5"
+                        >
+                          <option value={UserRole.USER}>User (Colleague)</option>
+                          <option value={UserRole.MANAGER}>Manager</option>
+                        </select>
+                      )}
+                      
                       <button 
                         onClick={() => handleDelete(user.id)}
                         className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                         title="Delete User"
                       >
-                        <Trash2 className="w-4 h-4" />
+                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   )}
                 </td>
               </tr>
             ))}
+            {activeUsers.length === 0 && (
+                <tr>
+                    <td colSpan={4} className="p-8 text-center text-slate-500 italic">No active users found.</td>
+                </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -181,7 +285,9 @@ export const UserManagement: React.FC = () => {
                 <select className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3 text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500 transition-all"
                   value={formData.role} onChange={e => setFormData({...formData, role: e.target.value as UserRole})}>
                   <option value={UserRole.USER}>User (Colleague)</option>
-                  <option value={UserRole.MANAGER}>Manager</option>
+                  {currentUser.role === UserRole.ADMIN && (
+                    <option value={UserRole.MANAGER}>Manager</option>
+                  )}
                 </select>
               </div>
               <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-100 dark:border-slate-800">
