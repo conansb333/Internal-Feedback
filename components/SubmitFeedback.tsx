@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Feedback, ResolutionStatus, ApprovalStatus, Priority, PROCESS_TYPES, SCENARIO_TAGS, ProcessType, ScenarioTag } from '../types';
 import { storageService } from '../services/storageService';
-import { geminiService } from '../services/geminiService';
 import { Button } from './Button';
 import { Send, CheckCircle2, User as UserIcon, Calendar, FileText, AlertOctagon, Hash } from 'lucide-react';
 
@@ -105,7 +104,7 @@ export const SubmitFeedback: React.FC<SubmitFeedbackProps> = ({ currentUser, onS
       )
   }
 
-  // Helper styles for inputs - Added 'border' class here
+  // Helper styles for inputs
   const inputLabel = "block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2";
   const inputClass = "block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-3 text-sm text-slate-900 dark:text-white focus:border-indigo-500 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-800 transition-all shadow-sm";
   const sectionClass = "bg-white dark:bg-slate-900 p-6 md:p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 mb-6";
@@ -113,11 +112,11 @@ export const SubmitFeedback: React.FC<SubmitFeedbackProps> = ({ currentUser, onS
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="max-w-5xl mx-auto p-8 pb-12">
+      <div className="max-w-5xl mx-auto p-4 md:p-8 pb-20">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
-              <Send className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+              <Send className="w-6 h-6 md:w-8 md:h-8 text-indigo-600 dark:text-indigo-400" />
               Create Report
             </h2>
             <p className="text-slate-500 dark:text-slate-400 mt-1">Document process issues or colleague feedback.</p>
@@ -279,19 +278,19 @@ export const SubmitFeedback: React.FC<SubmitFeedbackProps> = ({ currentUser, onS
 
             {/* Section 4: Detailed Feedback */}
             <div className={sectionClass}>
-              <div className="flex justify-between items-center mb-6 border-b border-slate-50 dark:border-slate-800 pb-2">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-slate-50 dark:border-slate-800 pb-2 gap-2">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
                   <FileText className="w-5 h-5 text-indigo-500" />
                   Detailed Feedback
                 </h3>
               </div>
               
-              <div className="mb-6">
+              <div className="mb-6 relative">
                  <textarea
                   rows={6}
                   value={feedbackContent}
                   onChange={(e) => setFeedbackContent(e.target.value)}
-                  placeholder="Provide constructive feedback using the Situation-Behavior-Impact model if possible..."
+                  placeholder="Draft your thoughts here (e.g., 'John didn't follow the return process')."
                   className={`${inputClass} leading-relaxed`}
                 />
               </div>
@@ -320,7 +319,7 @@ export const SubmitFeedback: React.FC<SubmitFeedbackProps> = ({ currentUser, onS
             </div>
 
             {/* Actions Card */}
-            <div className={`${sectionClass} flex items-center justify-end gap-3`}>
+            <div className={`${sectionClass} flex items-center justify-end gap-3 sticky bottom-0 z-20 border-t-2 border-slate-100 dark:border-slate-800 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]`}>
                <Button type="button" variant="secondary" onClick={() => onSubmitted()} className="w-full md:w-auto">Cancel</Button>
                <Button type="submit" disabled={!toUserId || !faultDescription || isSubmitting} isLoading={isSubmitting} className="w-full md:w-auto shadow-lg shadow-indigo-200 dark:shadow-none">
                 <Send className="w-4 h-4 mr-2" />

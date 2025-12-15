@@ -12,7 +12,7 @@ import { ActivityLogs } from './components/ActivityLogs';
 import { StickyNotes } from './components/StickyNotes';
 import { Announcements } from './components/Announcements';
 import { Dashboard } from './components/Dashboard';
-import { Lock, BarChart3, Clock, CheckCircle2, AlertTriangle, ArrowRight, UserPlus, Shield } from 'lucide-react';
+import { Lock, BarChart3, Clock, CheckCircle2, AlertTriangle, ArrowRight, UserPlus, Shield, Menu, Search, User as UserIcon } from 'lucide-react';
 
 export default function App() {
   const [auth, setAuth] = useState<AuthState>({ user: null, isAuthenticated: false });
@@ -20,13 +20,18 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Form State
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState(''); // For Signup
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Signup Specific State
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState('');
 
   // 1. Session Restoration Logic
   useEffect(() => {
@@ -57,6 +62,18 @@ export default function App() {
     }
   }, [darkMode]);
 
+  // Load users for the "Claim Account" dropdown
+  useEffect(() => {
+    if (isSigningUp) {
+      const loadClaimableUsers = async () => {
+        const users = await storageService.getUsers();
+        // Filter out admins from the claim list for security, allow Managers/Users
+        setAvailableUsers(users.filter(u => u.role !== UserRole.ADMIN).sort((a, b) => a.name.localeCompare(b.name)));
+      };
+      loadClaimableUsers();
+    }
+  }, [isSigningUp]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -64,7 +81,7 @@ export default function App() {
     
     try {
       const users = await storageService.getUsers();
-      const user = users.find(u => u.username === username && u.password === password);
+      const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
       
       if (user) {
         if (!user.isApproved) {
@@ -104,48 +121,70 @@ export default function App() {
     setError('');
     
     try {
-      const users = await storageService.getUsers();
-      
-      if (users.find(u => u.username === username)) {
-        setError('Username already exists.');
+      if (!selectedUserId) {
+        setError('Please select your name from the list.');
         setIsLoading(false);
         return;
       }
 
-      const newUser: User = {
-        id: Date.now().toString(),
-        name: fullName,
-        username: username,
-        password: password,
-        role: UserRole.USER, // Enforced Role
-        isApproved: false // Require Admin Approval
+      if (!username.trim()) {
+        setError('Please choose a username.');
+        setIsLoading(false);
+        return;
+      }
+
+      const allUsers = await storageService.getUsers();
+      // Check if username is taken by anyone else (excluding the current seed user we are claiming)
+      const isTaken = allUsers.some(u => u.username.toLowerCase() === username.toLowerCase() && u.id !== selectedUserId);
+      
+      if (isTaken) {
+          setError('Username is already taken. Please choose another.');
+          setIsLoading(false);
+          return;
+      }
+
+      const targetUser = availableUsers.find(u => u.id === selectedUserId);
+      if (!targetUser) {
+        setError('Selected user not found.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Update the EXISTING seed user with the new password and custom username, set to Pending
+      const updatedUser: User = {
+        ...targetUser,
+        username: username.trim(), // Set the user's chosen username
+        password: password, 
+        isApproved: false   // Reset approval so Manager/Admin must confirm identity
       };
 
-      await storageService.saveUser(newUser);
+      await storageService.saveUser(updatedUser);
       
-      // Log Signup Action (Context is system since user isn't logged in)
+      // Log Signup Action
       storageService.saveLog({
         id: Date.now().toString(),
         userId: 'SYSTEM',
-        userName: newUser.name,
-        userRole: newUser.role,
-        action: 'SIGNUP_REQUEST',
-        details: `New user account requested: ${newUser.username}`,
+        userName: targetUser.name,
+        userRole: targetUser.role,
+        action: 'ACCOUNT_CLAIM',
+        details: `Account claimed by user: ${updatedUser.username} (${targetUser.name})`,
         timestamp: Date.now()
       });
 
-      setSuccessMsg('Account request sent! Please wait for admin approval.');
-      // Switch back to login mode so they can't access app immediately
+      setSuccessMsg(`Access requested for ${targetUser.name}. Please wait for approval.`);
+      
+      // Switch back to login mode
       setIsLoading(false);
       setTimeout(() => {
           setIsSigningUp(false);
-          // Clear sensitive fields but keep username for convenience
           setPassword('');
-          setFullName('');
+          setUserSearch('');
+          setSelectedUserId('');
+          setUsername(updatedUser.username); // Pre-fill username for convenience
       }, 3000);
 
     } catch (err) {
-      setError('Failed to create account.');
+      setError('Failed to request access.');
       setIsLoading(false);
     }
   };
@@ -169,11 +208,21 @@ export default function App() {
     setAuth({ user: null, isAuthenticated: false });
     setUsername('');
     setPassword('');
-    setFullName('');
     setIsSigningUp(false);
     setError('');
     setSuccessMsg('');
   };
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setSidebarOpen(false); // Close sidebar on mobile when navigating
+  };
+
+  // Filter users for signup dropdown
+  const filteredAvailableUsers = availableUsers.filter(u => 
+    u.name.toLowerCase().includes(userSearch.toLowerCase()) || 
+    u.username.toLowerCase().includes(userSearch.toLowerCase())
+  );
 
   // Login/Signup Screen
   if (!auth.isAuthenticated || !auth.user) {
@@ -214,43 +263,95 @@ export default function App() {
           <div className="p-10 flex flex-col justify-center bg-white dark:bg-slate-900">
             <div className="text-center md:text-left mb-8">
                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                 {isSigningUp ? 'Request Access' : 'Welcome Back'}
+                 {isSigningUp ? 'Claim Account' : 'Welcome Back'}
                </h2>
                <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-                 {isSigningUp ? 'Submit your details for admin approval.' : 'Please enter your details to sign in.'}
+                 {isSigningUp ? 'Identify yourself to set up your password.' : 'Please enter your details to sign in.'}
                </p>
             </div>
             
             <form onSubmit={isSigningUp ? handleSignup : handleLogin} className="space-y-5">
               
-              {isSigningUp && (
-                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Full Name</label>
+              {isSigningUp ? (
+                <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-4">
+                   {/* Searchable Select for Identity */}
+                   <div>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Find Your Name</label>
+                      <div className="relative">
+                         <input 
+                            type="text"
+                            value={userSearch}
+                            onChange={(e) => setUserSearch(e.target.value)}
+                            placeholder="Search name..."
+                            className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 mb-2"
+                         />
+                         <Search className="absolute left-3 top-3.5 w-5 h-5 text-slate-400" />
+                      </div>
+                      
+                      <div className="max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800">
+                         {filteredAvailableUsers.length === 0 ? (
+                             <div className="p-4 text-center text-sm text-slate-400 italic">No names found.</div>
+                         ) : (
+                             filteredAvailableUsers.map(u => (
+                                 <button
+                                    key={u.id}
+                                    type="button"
+                                    onClick={() => { 
+                                      setSelectedUserId(u.id); 
+                                      setUserSearch(u.name); 
+                                      setUsername(''); // Ensure it is empty
+                                    }}
+                                    className={`w-full text-left px-4 py-3 text-sm flex items-center justify-between hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors ${selectedUserId === u.id ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-bold' : 'text-slate-700 dark:text-slate-300'}`}
+                                 >
+                                     <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px]">
+                                            {u.name.charAt(0)}
+                                        </div>
+                                        {u.name}
+                                     </div>
+                                     {selectedUserId === u.id && <CheckCircle2 className="w-4 h-4 text-indigo-600" />}
+                                 </button>
+                             ))
+                         )}
+                      </div>
+                   </div>
+
+                   {/* Custom Username Input */}
+                   {selectedUserId && (
+                        <div className="animate-in fade-in slide-in-from-top-1">
+                          <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Choose Username</label>
+                          <div className="relative">
+                            <input
+                                type="text"
+                                required
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                                placeholder="Use Your PY"
+                            />
+                            <UserIcon className="absolute left-3 top-3.5 w-5 h-5 text-slate-400 dark:text-slate-500" />
+                          </div>
+                        </div>
+                   )}
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Username</label>
                   <input
                     type="text"
                     required
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
-                    placeholder="e.g. John Doe"
+                    placeholder="e.g. jdoe"
                   />
                 </div>
               )}
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Username</label>
-                <input
-                  type="text"
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
-                  placeholder="e.g. jdoe"
-                />
-              </div>
               
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Password</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                    {isSigningUp ? 'Set Password' : 'Password'}
+                </label>
                 <div className="relative">
                   <input
                     type="password"
@@ -266,21 +367,21 @@ export default function App() {
 
               {error && (
                 <div className="text-red-600 dark:text-red-400 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded-lg flex items-center border border-red-100 dark:border-red-900/30 animate-in fade-in">
-                   <AlertTriangle className="w-4 h-4 mr-2" />
+                   <AlertTriangle className="w-4 h-4 mr-2 shrink-0" />
                    {error}
                 </div>
               )}
 
               {successMsg && (
                 <div className="text-green-600 dark:text-green-400 text-sm bg-green-50 dark:bg-green-900/20 p-3 rounded-lg flex items-center border border-green-100 dark:border-green-900/30 animate-in fade-in">
-                   <CheckCircle2 className="w-4 h-4 mr-2" />
+                   <CheckCircle2 className="w-4 h-4 mr-2 shrink-0" />
                    {successMsg}
                 </div>
               )}
 
               <button
                 type="submit"
-                disabled={isLoading || (isSigningUp && !fullName)}
+                disabled={isLoading || (isSigningUp && !selectedUserId)}
                 className="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white rounded-xl font-medium shadow-lg shadow-indigo-200 dark:shadow-none transform transition-all active:scale-[0.98] flex items-center justify-center group disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isLoading ? (isSigningUp ? 'Submitting...' : 'Signing In...') : (isSigningUp ? 'Request Access' : 'Sign In')}
@@ -290,20 +391,21 @@ export default function App() {
 
             <div className="mt-6 text-center">
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                {isSigningUp ? "Already have an account?" : "Don't have an account?"}
+                {isSigningUp ? "Already have a password?" : "First time here?"}
               </p>
               <button 
                 onClick={() => {
                   setIsSigningUp(!isSigningUp);
                   setError('');
                   setSuccessMsg('');
-                  setFullName('');
+                  setUserSearch('');
                   setUsername('');
                   setPassword('');
+                  setSelectedUserId('');
                 }}
                 className="mt-2 text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
               >
-                {isSigningUp ? "Sign In instead" : "Request Access"}
+                {isSigningUp ? "Sign In instead" : "Claim Account"}
               </button>
             </div>
             
@@ -323,26 +425,42 @@ export default function App() {
 
   // Authenticated Layout
   return (
-    <div className="flex h-screen bg-slate-200 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 transition-colors duration-200">
+    <div className="flex h-screen bg-slate-200 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 transition-colors duration-200 overflow-hidden">
+      
+      {/* Mobile Sidebar Toggle - Visible only on small screens */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 z-40">
+        <h1 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+               <BarChart3 className="w-5 h-5" />
+            </div>
+            Internal Feedback
+        </h1>
+        <button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-600 dark:text-slate-300">
+          <Menu className="w-6 h-6" />
+        </button>
+      </div>
+
       <Sidebar 
         user={auth.user} 
         onLogout={handleLogout} 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+        setActiveTab={handleTabChange} 
         darkMode={darkMode}
         toggleDarkMode={() => setDarkMode(!darkMode)}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
       
-      <main className="flex-1 overflow-hidden relative flex flex-col">
+      <main className="flex-1 overflow-hidden relative flex flex-col pt-16 md:pt-0">
         {activeTab === 'dashboard' && (
-          <Dashboard user={auth.user} setActiveTab={setActiveTab} />
+          <Dashboard user={auth.user} setActiveTab={handleTabChange} />
         )}
 
         {activeTab === 'announcements' && (
           <Announcements currentUser={auth.user} />
         )}
 
-        {activeTab === 'users' && (auth.user.role === UserRole.ADMIN || auth.user.role === UserRole.MANAGER) && (
+        {activeTab === 'users' && (
           <UserManagement currentUser={auth.user} />
         )}
 
@@ -353,7 +471,7 @@ export default function App() {
         {activeTab === 'submit-feedback' && (
           <SubmitFeedback 
             currentUser={auth.user} 
-            onSubmitted={() => setActiveTab('my-feedback')} 
+            onSubmitted={() => handleTabChange('my-feedback')} 
           />
         )}
 

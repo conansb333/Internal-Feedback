@@ -12,6 +12,7 @@ export interface User {
   role: UserRole;
   password?: string; // In a real app, this would be hashed. Mocking here.
   isApproved: boolean; // New field for admin approval
+  managerId?: string; // ID of the Team Manager this user reports to
 }
 
 export const PROCESS_TYPES = [
