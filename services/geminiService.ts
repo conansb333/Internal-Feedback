@@ -1,17 +1,14 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-// API Key hardcoded as per user request
-const apiKey = 'AIzaSyDWtrKjWTr8iumyk1JDsv6f1hON-hHwBSc'; 
-
-const ai = new GoogleGenAI({ apiKey });
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const geminiService = {
   /**
    * Analyzes the sentiment and key themes of a piece of feedback for Admins.
    */
   analyzeFeedback: async (text: string): Promise<string> => {
-    if (!apiKey) return "API Key missing.";
+    if (!process.env.API_KEY) return "API Key missing.";
 
     try {
       const response = await ai.models.generateContent({
@@ -33,7 +30,7 @@ export const geminiService = {
    * Generates a "Root Cause" summary for a list of feedback items.
    */
   generateAnalyticsInsight: async (feedbacks: any[]): Promise<string> => {
-    if (!apiKey) return "API Key missing.";
+    if (!process.env.API_KEY) return "API Key missing.";
     if (feedbacks.length === 0) return "No data available to analyze.";
 
     // Limit context to prevent token overflow, take last 20 descriptions
