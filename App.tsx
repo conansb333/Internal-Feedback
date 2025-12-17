@@ -11,6 +11,7 @@ import { LatestReports } from './components/LatestReports';
 import { ActivityLogs } from './components/ActivityLogs';
 import { StickyNotes } from './components/StickyNotes';
 import { Announcements } from './components/Announcements';
+import { KnowledgeBase } from './components/KnowledgeBase';
 import { Dashboard } from './components/Dashboard';
 import { Lock, BarChart3, Clock, CheckCircle2, AlertTriangle, ArrowRight, UserPlus, Shield, Menu, Search, User as UserIcon } from 'lucide-react';
 
@@ -458,6 +459,10 @@ export default function App() {
 
         {activeTab === 'announcements' && (
           <Announcements currentUser={auth.user} />
+        )}
+
+        {activeTab === 'knowledge-hub' && (
+          <KnowledgeBase currentUser={auth.user} />
         )}
 
         {activeTab === 'users' && (

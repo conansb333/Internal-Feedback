@@ -122,6 +122,16 @@ export interface Announcement {
   textSize?: 'sm' | 'base' | 'lg';
 }
 
+export interface Article {
+  id: string;
+  title: string;
+  category: string;
+  content: string;
+  lastUpdated: number;
+  authorId: string;
+  authorName: string;
+}
+
 export interface AuditLog {
   id: string;
   userId: string;

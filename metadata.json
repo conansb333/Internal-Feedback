@@ -1,5 +1,7 @@
 {
   "name": "Internal Feedback",
   "description": "A secure, role-based internal feedback and reporting system for checking colleague behavior and processes. Features AI-assisted sentiment analysis and insights.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }

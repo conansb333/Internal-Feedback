@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { storageService } from '../services/storageService';
 import { Notifications } from './Notifications';
-import { LogOut, LayoutDashboard, Send, Archive, Users, ShieldAlert, ChevronRight, Moon, Sun, BarChart2, Activity, History, PenLine, Megaphone, Bell, X } from 'lucide-react';
+import { LogOut, LayoutDashboard, Send, Archive, Users, ShieldAlert, ChevronRight, Moon, Sun, BarChart2, Activity, History, PenLine, Megaphone, Bell, X, Book } from 'lucide-react';
 
 interface SidebarProps {
   user: User;
@@ -35,6 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, activeTab, set
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN] },
     { id: 'announcements', label: 'News & Updates', icon: Megaphone, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN] },
+    { id: 'knowledge-hub', label: 'Knowledge Hub', icon: Book, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN] },
     { id: 'notes', label: 'My Notes', icon: PenLine, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN] },
     { id: 'analytics', label: 'Analytics', icon: BarChart2, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN] },
     { id: 'latest-reports', label: 'Latest Activity', icon: Activity, roles: [UserRole.MANAGER, UserRole.ADMIN] },
