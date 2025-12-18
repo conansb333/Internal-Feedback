@@ -22,7 +22,6 @@ import {
   MoreVertical,
   UserX,
   UserCircle,
-  // Added missing CheckCircle icon
   CheckCircle
 } from 'lucide-react';
 
@@ -358,7 +357,6 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
                               </div>
                           </div>
                           <div className="flex gap-2">
-                             {/* Fixed missing CheckCircle icon below */}
                              <button onClick={() => handleApprove(user)} disabled={loading} className="p-2 bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-500/10 dark:text-green-400 dark:hover:bg-green-500/20 rounded-lg transition-colors" title="Approve"><CheckCircle className="w-4 h-4" /></button>
                              <button onClick={() => setUserToDelete(user)} disabled={loading} className="p-2 bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 rounded-lg transition-colors" title="Reject"><X className="w-4 h-4" /></button>
                           </div>
@@ -382,8 +380,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
               />
             ))}
 
-            {/* Unassigned Users Section - Matches Provided Layout */}
-            {unassignedUsers.length > 0 && (
+            {/* Unassigned Users Section - RESTRICTED TO MANAGERS/ADMINS */}
+            {isManagerOrAdmin && unassignedUsers.length > 0 && (
               <div className="w-full bg-slate-100/50 dark:bg-slate-900/40 p-8 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 shadow-inner mt-12">
                   <div className="flex items-center gap-3 mb-8">
                       <div className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400">
@@ -419,7 +417,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
               </div>
             )}
 
-            {rootUsers.length === 0 && unassignedUsers.length === 0 && (
+            {rootUsers.length === 0 && (!isManagerOrAdmin || unassignedUsers.length === 0) && (
               <div className="p-20 text-center flex flex-col items-center gap-4">
                 <Users className="w-16 h-16 text-slate-200 dark:text-slate-800" />
                 <p className="text-slate-400 dark:text-slate-500 italic font-medium">No organizational data found.</p>
