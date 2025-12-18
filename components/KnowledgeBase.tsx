@@ -117,14 +117,16 @@ export const KnowledgeBase: React.FC<KnowledgeBaseProps> = ({ currentUser }) => 
     <div className="p-8 h-full flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 flex-shrink-0">
-        <div>
-           <h2 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
-               <Book className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-               Knowledge Hub
-           </h2>
-           <p className="text-slate-500 dark:text-slate-400 mt-1">
-             Delivery service guidelines, SLAs, and process documentation.
-           </p>
+        <div className="flex items-center gap-4">
+           <div className="p-3 bg-indigo-600 rounded-2xl shadow-xl shadow-indigo-100 dark:shadow-indigo-900/20">
+               <Book className="w-8 h-8 text-white" />
+           </div>
+           <div>
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Knowledge Hub</h2>
+              <p className="text-slate-500 dark:text-slate-400 mt-1">
+                Delivery service guidelines, SLAs, and process documentation.
+              </p>
+           </div>
         </div>
         
         {isManager && !isEditing && (
@@ -221,7 +223,7 @@ export const KnowledgeBase: React.FC<KnowledgeBaseProps> = ({ currentUser }) => 
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
                             <input 
-                                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold text-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold text-lg focus:ring-2 focus:ring-indigo-600 outline-none"
                                 value={editForm.title}
                                 onChange={e => setEditForm({...editForm, title: e.target.value})}
                                 placeholder="Article Title"
@@ -231,7 +233,7 @@ export const KnowledgeBase: React.FC<KnowledgeBaseProps> = ({ currentUser }) => 
                             <div className="flex-1">
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Category</label>
                                 <input 
-                                    className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-600 outline-none"
                                     value={editForm.category}
                                     onChange={e => setEditForm({...editForm, category: e.target.value})}
                                     placeholder="e.g. Processes"

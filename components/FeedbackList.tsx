@@ -222,18 +222,22 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({ currentUser, mode })
   return (
     <div className="p-4 md:p-8 h-full overflow-y-auto">
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-4">
-        <div>
-           <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+        <div className="flex items-center gap-4">
+           <div className="p-3 bg-indigo-600 rounded-2xl shadow-xl shadow-indigo-100 dark:shadow-indigo-900/20">
              {mode === 'all' ? (
-               <ShieldAlert className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+               <ShieldAlert className="w-8 h-8 text-white" />
              ) : (
-               <Archive className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+               <Archive className="w-8 h-8 text-white" />
              )}
-             {mode === 'all' ? 'All Reports' : 'My Reports'}
-           </h2>
-           <p className="text-slate-500 dark:text-slate-400 mt-1">
-             Detailed view of all feedback records and statuses.
-           </p>
+           </div>
+           <div>
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-white">
+                {mode === 'all' ? 'All Reports' : 'My Reports'}
+              </h2>
+              <p className="text-slate-500 dark:text-slate-400 mt-1">
+                Detailed view of all feedback records and statuses.
+              </p>
+           </div>
         </div>
         
         <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, UserRole, AuditLog } from '../types';
 import { storageService } from '../services/storageService';
@@ -77,16 +78,18 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ currentUser }) => {
   return (
     <div className="p-8 h-full overflow-y-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-           <h2 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
-               <History className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-               Audit Logs
-           </h2>
-           <p className="text-slate-500 dark:text-slate-400 mt-1">
-             {currentUser.role === UserRole.ADMIN 
-               ? "Full system audit trail. Monitoring Manager and User activities." 
-               : "Team activity log. Monitoring User activities."}
-           </p>
+        <div className="flex items-center gap-4">
+           <div className="p-3 bg-indigo-600 rounded-2xl shadow-xl shadow-indigo-100 dark:shadow-indigo-900/20">
+               <History className="w-8 h-8 text-white" />
+           </div>
+           <div>
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Audit Logs</h2>
+              <p className="text-slate-500 dark:text-slate-400 mt-1">
+                {currentUser.role === UserRole.ADMIN 
+                  ? "Full system audit trail. Monitoring Manager and User activities." 
+                  : "Team activity log. Monitoring User activities."}
+              </p>
+           </div>
         </div>
         <button 
           onClick={loadLogs} 

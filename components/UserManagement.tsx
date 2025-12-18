@@ -295,12 +295,14 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
   return (
     <div className="p-8 h-full overflow-y-auto bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-           <h2 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
-               <Users className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-               Organization Directory
-           </h2>
-           <p className="text-slate-500 dark:text-slate-400 mt-1">Explore team structure and manage roles.</p>
+        <div className="flex items-center gap-4">
+           <div className="p-3 bg-indigo-600 rounded-2xl shadow-xl shadow-indigo-100 dark:shadow-indigo-900/20">
+               <Users className="w-8 h-8 text-white" />
+           </div>
+           <div>
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Organization Directory</h2>
+              <p className="text-slate-500 dark:text-slate-400 mt-1">Explore team structure and manage roles.</p>
+           </div>
         </div>
         
         <div className="flex items-center gap-3 w-full md:w-auto">
@@ -318,13 +320,13 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
             <div className="flex bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                 <button 
                   onClick={() => setViewMode('list')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'}`}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'list' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'}`}
                 >
                   <List className="w-4 h-4" />
                 </button>
                 <button 
                   onClick={() => setViewMode('hierarchy')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'hierarchy' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'}`}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'hierarchy' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'}`}
                 >
                   <Network className="w-4 h-4" />
                 </button>
