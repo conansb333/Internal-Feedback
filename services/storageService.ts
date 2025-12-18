@@ -3,12 +3,12 @@ import { supabase } from './supabaseClient';
 import { User, Feedback, UserRole, AuditLog, Note, Announcement, ApprovalStatus, Notification, NotificationType, Article } from '../types';
 
 // --- DATA SEEDING UTILITIES ---
-const createId = (name: string) => name.toLowerCase().replace(/\s+/g, '.');
-const createUsername = (name: string) => name.toLowerCase().replace(/\s+/g, '.');
+const createId = (name: string) => name.toLowerCase().replace(/\s+/g, '.').trim();
+const createUsername = (name: string) => name.toLowerCase().replace(/\s+/g, '.').trim();
 
 const MANAGERS_LIST = [
-  "Achraf Moujahid", "Ahmed El Ghezlani", "Assiya Ferkoussi", "Hakim Ziyady",
-  "Houda Benmessaoud", "Imane Khouader", "Mohammed Khaladi", "Nour El Houda Larhrib",
+  "Achraf Moujahid", "Ahmed El Ghezlani", "Assiya FERKOUSSI", "Hakim Ziyady",
+  "Houda Benmessaoud", "Imane Khouader", "Mohammed Khaladi", "Nour El houda LARHRIB",
   "Omar Mzaouri", "Rihab Lasri", "Salah Eddine Ajlil", "Salma Azouz"
 ];
 
@@ -29,15 +29,15 @@ const RAW_ASSOCIATE_DATA = [
     ["Mohammed Jai", "Achraf Moujahid"], ["Oumayma Dakkoune", "Achraf Moujahid"], ["Oussama Zaite", "Achraf Moujahid"],
     ["Zakaria El Yaagoubi", "Achraf Moujahid"], ["Abdelhak Er Rkabi", "Ahmed El Ghezlani"], ["Amina Azzouzi", "Ahmed El Ghezlani"],
     ["Bilal El Masmoudy", "Ahmed El Ghezlani"], ["Hamza Khaldi", "Ahmed El Ghezlani"], ["Hamza Zouichi", "Ahmed El Ghezlani"],
-    ["Haytham El Bahi", "Ahmed El Ghezlani"], ["Manar Doua", "Ahmed El Ghezlani"], ["Mounir Ec Sabery", "Ahmed El Ghezlani"],
-    ["Nouhayla Aouine", "Ahmed El Ghezlani"], ["Oussama Lakhal", "Ahmed El Ghezlani"], ["Oussama Majait", "Ahmed El Ghezlani"],
+    ["Haytham El Bahi", "Ahmed El Bahi"], ["Manar Doua", "Ahmed El Ghezlani"], ["Mounir Ec Sabery", "Ahmed El Ghezlani"],
+    ["Nouhayla Aouine", "Ahmed El Ghezlani"], ["Oussama Lakhal", "Ahmed El ghezlani"], ["Oussama Majait", "Ahmed El Ghezlani"],
     ["Rhita Tazi", "Ahmed El Ghezlani"], ["Yassine Hida", "Ahmed El Ghezlani"], ["Youssef Kerroumi", "Ahmed El Ghezlani"],
-    ["Adnane Ait Karroum", "Assiya Ferkoussi"], ["Ayoub Eddbiri", "Assiya Ferkoussi"], ["Fatima Zahra Belmir", "Assiya Ferkoussi"],
-    ["Khalil Ouchaou", "Assiya Ferkoussi"], ["Malak Oumouss", "Assiya Ferkoussi"], ["Maroua Tahiri", "Assiya Ferkoussi"],
-    ["Mehdi Frej", "Assiya Ferkoussi"], ["Saad Maissour", "Assiya Ferkoussi"], ["Souhaila Khatouri", "Assiya Ferkoussi"],
-    ["Wissal Abdelghani", "Assiya Ferkoussi"], ["Ali Ibn El Hachimy", "Assiya Ferkoussi"], ["Hafsa Lafkih", "Assiya Ferkoussi"],
-    ["Houssam Bahhou", "Assiya Ferkoussi"], ["Mahmoud Alizou", "Assiya Ferkoussi"], ["Mohamed Tacherifine", "Assiya Ferkoussi"],
-    ["Oussama Boujnah", "Assiya Ferkoussi"], ["Sanae El Markadi", "Assiya Ferkoussi"], ["Zakariya Ezzarouali", "Assiya Ferkoussi"],
+    ["Adnane Ait Karroum", "Assiya FERKOUSSI"], ["Ayoub Eddbiri", "Assiya FERKOUSSI"], ["Fatima Zahra Belmir", "Assiya FERKOUSSI"],
+    ["Khalil Ouchaou", "Assiya FERKOUSSI"], ["Malak Oumouss", "Assiya FERKOUSSI"], ["Maroua Tahiri", "Assiya FERKOUSSI"],
+    ["Mehdi Frej", "Assiya FERKOUSSI"], ["Saad Maissour", "Assiya FERKOUSSI"], ["Souhaila Khatouri", "Assiya FERKOUSSI"],
+    ["Wissal Abdelghani", "Assiya FERKOUSSI"], ["Ali Ibn El Hachimy", "Assiya FERKOUSSI"], ["Hafsa Lafkih", "Assiya FERKOUSSI"],
+    ["Houssam Bahhou", "Assiya FERKOUSSI"], ["Mahmoud Alizou", "Assiya FERKOUSSI"], ["Mohamed Tacherifine", "Assiya FERKOUSSI"],
+    ["Oussama Boujnah", "Assiya FERKOUSSI"], ["Sanae El Markadi", "Assiya FERKOUSSI"], ["Zakariya Ezzarouali", "Assiya FERKOUSSI"],
     ["Abderrazaq Essadraty", "Hakim Ziyady"], ["Anass Boudra", "Hakim Ziyady"], ["Anouar Rahhal", "Hakim Ziyady"],
     ["Awatif Ben Zakour", "Hakim Ziyady"], ["Fayza Chrigui", "Hakim Ziyady"], ["Ghita El Azhary", "Hakim Ziyady"],
     ["Hanane Hajli", "Hakim Ziyady"], ["Hiba Ben Zakour", "Hakim Ziyady"], ["Mohammed Ben Tahra", "Hakim Ziyady"],
@@ -51,22 +51,22 @@ const RAW_ASSOCIATE_DATA = [
     ["Yassmine Fakir", "Houda Benmessaoud"], ["Abdeljalil Mochreq", "Imane Khouader"], ["Abdessamad Mouchrif", "Imane Khouader"],
     ["Aya El Boukhari", "Imane Khouader"], ["Chadi Karim", "Imane Khouader"], ["Hafsa Lahsaini", "Imane Khouader"],
     ["Redouane Ait Daoud", "Imane Khouader"], ["Souhail Daoufa", "Imane Khouader"], ["Taha Daki", "Imane Khouader"],
-    ["Ziad Maizya", "Imane Khouader"], ["Alae Bouchouk", "Imane Khouader"], ["Asmae Laabidi", "Imane Khouader"],
-    ["Ayman Bouhaddioui", "Imane Khouader"], ["Aymane Elmaizi", "Imane Khouader"], ["Doha Elbakkali", "Imane Khouader"],
-    ["Khaoula El Hachimi", "Imane Khouader"], ["Majda Ait Jennek", "Imane Khouader"], ["Marwa Tribkou", "Imane Khouader"],
-    ["Mehdi Nadbour", "Imane Khouader"], ["Moad Drissi", "Imane Khouader"], ["Mohamed Reda Mahssoune", "Imane Khouader"],
-    ["Mohammed Chafik Elhaddun", "Imane Khouader"], ["Nasr-Eddine Kerroumi", "Imane Khouader"], ["Safae Bellamine", "Imane Khouader"],
-    ["Siman Saflal", "Imane Khouader"], ["Wijdane Bouaoiad", "Imane Khouader"], ["Ahmed Sadoq", "Mohammed Khaladi"],
+    ["Ziad Maizya", "Imane Khouader"], ["ALAE BOUCHOUK", "Imane Khouader"], ["ASMAE LAABIDI", "Imane Khouader"],
+    ["AYMAN BOUHADDIOUI", "Imane Khouader"], ["AYMANE ELMAIZI", "Imane Khouader"], ["DOHA ELBAKKALI", "Imane Khouader"],
+    ["KHAOULA EL HACHIMI", "Imane Khouader"], ["MAJDA AIT JENNEK", "Imane Khouader"], ["MARWA TRIBKOU", "Imane Khouader"],
+    ["MEHDI NADBOUR", "Imane Khouader"], ["MOAD DRISSI", "Imane Khouader"], ["MOHAMED REDA MAHSSOUNE", "Imane Khouader"],
+    ["MOHAMMED CHAFIK ELHADDUN", "Imane Khouader"], ["NASR-EDDINE KERROUMI", "Imane Khouader"], ["SAFAE BELLAMINE", "Imane Khouader"],
+    ["SIMAN SAFLAL", "Imane Khouader"], ["WIJDANE BOUAOIAD", "Imane Khouader"], ["Ahmed Sadoq", "Mohammed Khaladi"],
     ["Amal El Oumrani", "Mohammed Khaladi"], ["Anass Janah", "Mohammed Khaladi"], ["Anouar Kharchoufa", "Mohammed Khaladi"],
     ["Bilal El Mejahedy", "Mohammed Khaladi"], ["Hassan Khouaja", "Mohammed Khaladi"], ["Hicham Moujahid", "Mohammed Khaladi"],
     ["Houda Yousf Ibrahim", "Mohammed Khaladi"], ["Khadija El Hajjaji", "Mohammed Khaladi"], ["Khalid Zouar", "Mohammed Khaladi"],
     ["Mohammed Sayyad", "Mohammed Khaladi"], ["Oumaima Es Sahli", "Mohammed Khaladi"], ["Oussama Cherbak", "Mohammed Khaladi"],
-    ["Wadie Kouidi", "Mohammed Khaladi"], ["Yassine Tanhim", "Mohammed Khaladi"], ["Ayman El Adnany", "Nour El Houda Larhrib"],
-    ["Ayyoub Rahmoun", "Nour El Houda Larhrib"], ["Douae Alkhir Afouraou", "Nour El Houda Larhrib"], ["Houda Echarkaoui", "Nour El Houda Larhrib"],
-    ["Ikram Elahadi", "Nour El Houda Larhrib"], ["Ismail El Ouali Alami", "Nour El Houda Larhrib"], ["Kawtar Farai", "Nour El Houda Larhrib"],
-    ["Manar Nhaili", "Nour El Houda Larhrib"], ["Meryem Maizi", "Nour El Houda Larhrib"], ["Mouad Essalki", "Nour El Houda Larhrib"],
-    ["Sara Lahsaini", "Nour El Houda Larhrib"], ["Taha Salim", "Nour El Houda Larhrib"], ["Yassine El Asraoui", "Nour El Houda Larhrib"],
-    ["Yassine Soudani", "Nour El Houda Larhrib"], ["Yassir Benzakour", "Nour El Houda Larhrib"], ["Youssef El Hilali", "Nour El Houda Larhrib"],
+    ["Wadie Kouidi", "Mohammed Khaladi"], ["Yassine Tanhim", "Mohammed Khaladi"], ["Ayman El Adnany", "Nour El houda LARHRIB"],
+    ["Ayyoub Rahmoun", "Nour El houda LARHRIB"], ["Douae Alkhir Afouraou", "Nour El houda LARHRIB"], ["Houda Echarkaoui", "Nour El houda LARHRIB"],
+    ["Ikram Elahadi", "Nour El houda LARHRIB"], ["Ismail El Ouali Alami", "Nour El houda LARHRIB"], ["Kawtar Farai", "Nour El houda LARHRIB"],
+    ["Manar Nhaili", "Nour El houda LARHRIB"], ["Meryem Maizi", "Nour El houda LARHRIB"], ["Mouad Essalki", "Nour El houda LARHRIB"],
+    ["Sara Lahsaini", "Nour El houda LARHRIB"], ["Taha Salim", "Nour El houda LARHRIB"], ["Yassine El Asraoui", "Nour El houda LARHRIB"],
+    ["Yassine Soudani", "Nour El houda LARHRIB"], ["Yassir Benzakour", "Nour El houda LARHRIB"], ["Youssef El Hilali", "Nour El houda LARHRIB"],
     ["Iman Bel Hadri", "Omar Mzaouri"], ["Hasnae El Belghiti", "Omar Mzaouri"], ["Aziza El Omri", "Omar Mzaouri"],
     ["Hamza Foullani", "Omar Mzaouri"], ["Salma Ben Mallouk", "Omar Mzaouri"], ["Yousra Rachd", "Omar Mzaouri"],
     ["Malika Echamah", "Omar Mzaouri"], ["Abdelmalek Iazzaoui", "Omar Mzaouri"], ["Nassime Aourir", "Omar Mzaouri"],
@@ -75,38 +75,38 @@ const RAW_ASSOCIATE_DATA = [
     ["Hiba Khalil", "Omar Mzaouri"], ["Marouane El Houss", "Omar Mzaouri"], ["Meryem Habbass", "Omar Mzaouri"],
     ["Mohcine Rabah", "Omar Mzaouri"], ["Nada Fars", "Omar Mzaouri"], ["Oumaima Ouamou", "Omar Mzaouri"],
     ["Oussama Laajel", "Omar Mzaouri"], ["Rayane Hamama", "Omar Mzaouri"], ["Younous Belfkih", "Omar Mzaouri"],
-    ["Amine Ouaziz", "Rihab Lasri"], ["Doha Wahdani", "Rihab Lasri"], ["Ferdaous Agourari", "Rihab Lasri"],
-    ["Hamza Joorane", "Rihab Lasri"], ["Hassan El Idrissi", "Rihab Lasri"], ["Ismail Gaiz", "Rihab Lasri"],
-    ["Meryem Alami", "Rihab Lasri"], ["Meryem Bousseta", "Rihab Lasri"], ["Nouamane Alizou", "Rihab Lasri"],
-    ["Oussama Chatir", "Rihab Lasri"], ["Rachad Hatri", "Rihab Lasri"], ["Rania El Khattabi", "Rihab Lasri"],
-    ["Reda El Haidouri", "Rihab Lasri"], ["Rime Abdellaoui", "Rihab Lasri"], ["Samah Ait Salah", "Rihab Lasri"],
-    ["Walid Ouardi", "Rihab Lasri"], ["Abdessamad El Hamraoui", "Salah Eddine Ajlil"], ["Achraf Hamyouy", "Salah Eddine Ajlil"],
-    ["Asma El Fahim", "Salah Eddine Ajlil"], ["Fatima Zahra El Azhary", "Salah Eddine Ajlil"], ["Haytam Brada", "Salah Eddine Ajlil"],
-    ["Hiba Mrani Alaoui", "Salah Eddine Ajlil"], ["Houria Rhanimi", "Salah Eddine Ajlil"], ["Houssam Aboubi", "Salah Eddine Ajlil"],
-    ["Houssam Tiabi", "Salah Eddine Ajlil"], ["Jihane Riyani", "Salah Eddine Ajlil"], ["Mohamed El Khayar", "Salah Eddine Ajlil"],
-    ["Nora Ouahib", "Salah Eddine Ajlil"], ["Safaa El Haim", "Salah Eddine Ajlil"], ["Taha Yassine Abouabdellah", "Salah Eddine Ajlil"],
-    ["Ayoub Benellouti", "Salma Azouz"], ["Azzeddine Raiss", "Salma Azouz"], ["Fatima Zahra El Jabiri", "Salma Azouz"],
-    ["Hiba Boudrafte", "Salma Azouz"], ["Hiba Mzannah", "Salma Azouz"], ["Houda Khouya", "Salma Azouz"],
-    ["Kawtar Attia", "Salma Azouz"], ["Khadija Hamza", "Salma Azouz"], ["Mehdi Touab", "Salma Azouz"],
-    ["Mohamed Mhaouch", "Salma Azouz"], ["Mouad Oubelahcen", "Salma Azouz"], ["Mouad Oulahyane", "Salma Azouz"],
-    ["Nabil El Meguioui", "Salma Azouz"], ["Nossaiba Nouini", "Salma Azouz"], ["Oumaima Aboutahir", "Salma Azouz"],
-    ["Oumaima Touil", "Salma Azouz"], ["Oumayma Ami", "Salma Azouz"], ["Oussama Filali", "Salma Azouz"],
-    ["Salma Bennani", "Salma Azouz"], ["Soufiane Hissi", "Salma Azouz"], ["Soukaina El Hammoudani", "Salma Azouz"],
-    ["Abdelhak Ibn El Ahmar", "Achraf Moujahid"], ["Abderrahman Mouilly", "TBD"], ["Adam Ettabib", "Achraf Moujahid"],
-    ["Alaa Laknaoui", "TBD"], ["Amal Hadday", "Achraf Moujahid"], ["Amina Makdouf", "Achraf Moujahid"],
-    ["Ayman Zrif", "Achraf Moujahid"], ["Dounia El Khattabi", "TBD"], ["Fatene Hajar", "Mohammed Khaladi"],
-    ["Fatima Ezzahraa Atif", "TBD"], ["Fatima Zahrae Moussaid", "TBD"], ["Hatim Daghouj", "Mohammed Khaladi"],
-    ["Houssame Dahak", "TBD"], ["Intissar El Makaoui", "TBD"], ["Kaoutar Benhelli", "Achraf Moujahid"],
-    ["Kaoutar Essaissi", "Achraf Moujahid"], ["Khalil Nassoukhi", "TBD"], ["Laila Arrache", "TBD"],
-    ["Mohamed Hatim Essaadaoui", "TBD"], ["Mohammed Taha Snah", "TBD"], ["Mustapha Badih", "TBD"],
-    ["Nacer Es Soujaa El Hassan", "TBD"], ["Nada Ben Fares", "TBD"], ["Nada Benichou", "TBD"],
-    ["Nassim Taous", "TBD"], ["Nouhaila Zemrani", "TBD"], ["Othman Belbennar", "TBD"],
-    ["Rajae Cherkaoui El Maataoui", "TBD"], ["Seif Eddine Boukhchen", "TBD"], ["Taha Yassine Karim", "TBD"],
-    ["Yasser Hayah", "TBD"], ["Yassine El Hilali", "TBD"], ["Youssef El Bouchtaoui", "TBD"], ["Loubna Sttaf", "TBD"]
+    ["Abdessamad Nahid", "Rihab Lasri"], ["Amine Ouaziz", "Rihab Lasri"], ["Doha Wahdani", "Rihab Lasri"],
+    ["Ferdaous Agourari", "Rihab Lasri"], ["Hamza Joorane", "Rihab Lasri"], ["Hassan El Idrissi", "Rihab Lasri"],
+    ["Ismail Gaiz", "Rihab Lasri"], ["Meryem Alami", "Rihab Lasri"], ["Meryem Bousseta", "Rihab Lasri"],
+    ["Nouamane Alizou", "Rihab Lasri"], ["Oussama Chatir", "Rihab Lasri"], ["Rachad Hatri", "Rihab Lasri"],
+    ["Rania El Khattabi", "Rihab Lasri"], ["Reda El Haidouri", "Rihab Lasri"], ["Rime Abdellaoui", "Rihab Lasri"],
+    ["Samah Ait Salah", "Rihab Lasri"], ["Walid Ouardi", "Rihab Lasri"], ["Abdessamad El Hamraoui", "Salah Eddine Ajlil"],
+    ["Achraf Hamyouy", "Salah Eddine Ajlil"], ["Asma El Fahim", "Salah Eddine Ajlil"], ["Fatima Zahra El Azhary", "Salah Eddine Ajlil"],
+    ["Haytam Brada", "Salah Eddine Ajlil"], ["Hiba Mrani Alaoui", "Salah Eddine Ajlil"], ["Houria Rhanimi", "Salah Eddine Ajlil"],
+    ["Houssam Aboubi", "Salah Eddine Ajlil"], ["Houssam Tiabi", "Salah Eddine Ajlil"], ["Jihane Riyani", "Salah Eddine Ajlil"],
+    ["Mohamed El Khayar", "Salah Eddine Ajlil"], ["Nora Ouahib", "Salah Eddine Ajlil"], ["Safaa El Haim", "Salah Eddine Ajlil"],
+    ["Taha Yassine Abouabdellah", "Salah Eddine Ajlil"], ["Ayoub Benellouti", "Salma Azouz"], ["Azzeddine Raiss", "Salma Azouz"],
+    ["Fatima Zahra El Jabiri", "Salma Azouz"], ["Hiba Boudrafte", "Salma Azouz"], ["Hiba Mzannah", "Salma Azouz"],
+    ["Houda Khouya", "Salma Azouz"], ["Kawtar Attia", "Salma Azouz"], ["Khadija Hamza", "Salma Azouz"],
+    ["Mehdi Touab", "Salma Azouz"], ["Mohamed Mhaouch", "Salma Azouz"], ["Mouad Oubelahcen", "Salma Azouz"],
+    ["Mouad Oulahyane", "Salma Azouz"], ["Nabil El Meguioui", "Salma Azouz"], ["Nossaiba Nouini", "Salma Azouz"],
+    ["Oumaima Aboutahir", "Salma Azouz"], ["Oumaima Touil", "Salma Azouz"], ["Oumayma Ami", "Salma Azouz"],
+    ["Oussama Filali", "Salma Azouz"], ["Salma Bennani", "Salma Azouz"], ["Soufiane Hissi", "Salma Azouz"],
+    ["Soukaina El Hammoudani", "Salma Azouz"], ["Abdelhak Ibn El Ahmar", "Achraf Moujahid"], ["Abderrahman Mouilly", "TBD"],
+    ["Adam Ettabib", "Achraf Moujahid"], ["Alaa Laknaoui", "TBD"], ["Amal Hadday", "Achraf Moujahid"],
+    ["Amina Makdouf", "Achraf Moujahid"], ["Ayman Zrif", "Achraf Moujahid"], ["Dounia El KHATTABI", "TBD"],
+    ["Fatene Hajar", "Mohammed Khaladi"], ["FATIMA EZZAHRAA ATIF", "TBD"], ["FATIMA ZAHRAE MOUSSAID", "TBD"],
+    ["Hatim Daghouj", "Mohammed Khaladi"], ["HOUSSAME DAHAK", "TBD"], ["INTISSAR EL MAKAOUI", "TBD"],
+    ["Kaoutar Benhelli", "Achraf Moujahid"], ["Kaoutar Essaissi", "Achraf Moujahid"], ["Khalil Nassoukhi", "TBD"],
+    ["Laila Arrache", "TBD"], ["MOHAMED HATIM ESSAADAOUI", "TBD"], ["Mohammed Taha Snah", "TBD"],
+    ["Mustapha Badih", "TBD"], ["Nacer Es Soujaa El Hassan", "TBD"], ["Nada Ben Fares", "TBD"],
+    ["Nada Benichou", "TBD"], ["Nassim Taous", "TBD"], ["NOUHAILA ZEMRANI", "TBD"], ["OTHMAN BELBENNAR", "TBD"],
+    ["RAJAE CHERKAOUI EL MAATAOUI", "TBD"], ["Seif Eddine Boukhchen", "TBD"], ["TAHA YASSINE KARIM", "TBD"],
+    ["Yasser Hayah", "TBD"], ["YASSINE EL HILALI", "TBD"], ["YOUSSEF EL BOUCHTAOUI", "TBD"], ["Loubna Sttaf", "TBD"]
 ];
 
 const associates: User[] = RAW_ASSOCIATE_DATA.map(([assocName, managerName]) => {
-  const mgrId = managerName === "TBD" ? undefined : createId(managerName);
+  const mgrId = managerName === "TBD" ? null : createId(managerName);
   return {
     id: createId(assocName),
     username: createUsername(assocName),
@@ -128,238 +128,256 @@ const adminUser: User = {
   managerId: createId('Rihab Lasri')
 };
 
-const SEED_USERS: User[] = [adminUser, ...managers, ...associates];
-
-const SEED_ARTICLES: Article[] = [
-    {
-        id: 'delivery-slas',
-        title: 'Delivery Service Level Agreements (SLAs)',
-        category: 'Processes',
-        content: `Standard Delivery:\n- 3-5 Business Days for mainland UK.\n- Orders must be placed before 8pm for same-day dispatch.\n\nNext Day Delivery:\n- Next working day delivery if ordered before 8pm.\n- Excludes Sundays and Bank Holidays.\n\nClick & Collect:\n- Available next day after 2pm at selected stores.\n- 7 days to collect before automatic return.`,
-        lastUpdated: Date.now(),
-        authorId: 'admin',
-        authorName: 'System'
-    },
-    {
-        id: 'returns-process',
-        title: 'Returns & Refund Guidelines',
-        category: 'Returns',
-        content: `Standard Return Policy:\n- 35 days for unused items in original packaging.\n- Proof of purchase required (Receipt or Order Confirmation).\n\nDamaged Items:\n- Inspect immediately upon return.\n- Mark as "Damaged" in the system to trigger RTS (Return to Sender) flow.\n- Do not return damaged items to stock.\n\nRefund Timeline:\n- Processed within 24 hours of receipt.\n- Customer sees funds in 3-5 business days.`,
-        lastUpdated: Date.now(),
-        authorId: 'admin',
-        authorName: 'System'
-    }
-];
+export const SEED_USERS: User[] = [adminUser, ...managers, ...associates];
 
 const LOCAL_KEYS = {
-  USERS: 'app_users_backup',
-  FEEDBACKS: 'app_feedbacks_backup',
-  LOGS: 'audit_logs_backup',
-  NOTES: 'user_notes_backup',
-  ANNOUNCEMENTS: 'app_announcements_backup',
-  NOTIFICATIONS: 'user_notifications_backup',
-  ARTICLES: 'app_articles_backup'
+  USERS: 'app_users_backup_v2',
+  FEEDBACKS: 'app_feedbacks_backup_v2',
+  LOGS: 'audit_logs_backup_v2'
+};
+
+// Helper to sanitize object for Supabase
+const sanitizeForSupabase = (obj: any) => {
+    const sanitized = { ...obj };
+    Object.keys(sanitized).forEach(key => {
+        if (sanitized[key] === undefined) {
+            sanitized[key] = null;
+        }
+    });
+    return sanitized;
+};
+
+// Map database errors to friendly messages
+const getErrorMessage = (error: any): string => {
+    if (!error) return 'Unknown error';
+    if (typeof error === 'string') return error;
+    if (error.message) return error.message;
+    return JSON.stringify(error);
 };
 
 export const storageService = {
   initialize: async () => {
     try {
-      const { count, error } = await supabase.from('users').select('id', { count: 'exact', head: true });
-      if (error) throw error;
-      if (count === 0) {
-        const chunkSize = 50;
-        for (let i = 0; i < SEED_USERS.length; i += chunkSize) {
-            await supabase.from('users').insert(SEED_USERS.slice(i, i + chunkSize));
-        }
-      }
-    } catch (err) {
-      console.warn('Supabase initialization failed, relying on local seed.', err);
       if (!localStorage.getItem(LOCAL_KEYS.USERS)) {
-        localStorage.setItem(LOCAL_KEYS.USERS, JSON.stringify(SEED_USERS));
+          localStorage.setItem(LOCAL_KEYS.USERS, JSON.stringify(SEED_USERS));
       }
-    }
-    
-    if (!localStorage.getItem(LOCAL_KEYS.ARTICLES)) {
-      localStorage.setItem(LOCAL_KEYS.ARTICLES, JSON.stringify(SEED_ARTICLES));
+
+      const { data, error } = await supabase.from('users').select('id').limit(1);
+      if (error) {
+          console.error('Supabase Init Error:', getErrorMessage(error));
+          throw error;
+      }
+      console.log('Supabase Connection: Active');
+    } catch (err) {
+      console.warn('Supabase Offline: Operating in Cache Mode.');
     }
   },
 
-  getUsers: async (): Promise<User[]> => {
+  testConnection: async () => {
     try {
-      const { data, error } = await supabase.from('users').select('*');
-      if (error) throw error;
-      localStorage.setItem(LOCAL_KEYS.USERS, JSON.stringify(data));
-      return data;
+      const { error } = await supabase.from('users').select('id').limit(1);
+      return !error;
+    } catch { return false; }
+  },
+
+  getUsers: async (forceCloud = false): Promise<User[]> => {
+    try {
+      const finalDirectory = [...SEED_USERS];
+      const { data: cloudUsers, error } = await supabase.from('users').select('*');
+      
+      if (!error && cloudUsers && cloudUsers.length > 0) {
+          cloudUsers.forEach(cloudUser => {
+              const idx = finalDirectory.findIndex(u => u.id === cloudUser.id);
+              if (idx > -1) {
+                  finalDirectory[idx] = { ...finalDirectory[idx], ...cloudUser };
+              } else {
+                  finalDirectory.push(cloudUser);
+              }
+          });
+          localStorage.setItem(LOCAL_KEYS.USERS, JSON.stringify(finalDirectory));
+          return finalDirectory;
+      }
+      
+      return JSON.parse(localStorage.getItem(LOCAL_KEYS.USERS) || JSON.stringify(SEED_USERS));
     } catch (e) {
-      const local = localStorage.getItem(LOCAL_KEYS.USERS);
-      return local ? JSON.parse(local) : SEED_USERS;
+      return JSON.parse(localStorage.getItem(LOCAL_KEYS.USERS) || JSON.stringify(SEED_USERS));
     }
   },
 
   saveUser: async (user: User) => {
+    console.log('Initiating sync for:', user.username);
+    let sanitizedUser = sanitizeForSupabase(user);
+    
+    const attemptSave = async (data: any): Promise<void> => {
+        const { error } = await supabase.from('users').upsert(data, { onConflict: 'id' });
+        
+        if (error) {
+            console.error('Supabase save error:', error.code, error.message);
+            
+            // Handle Missing Columns (PGRST204)
+            if (error.code === 'PGRST204' || error.message?.includes('column')) {
+                console.warn('Detected missing column. Attempting strip and retry...');
+                
+                // Identify the likely culprit column based on common variations
+                const columnsToTryStripping = ['managerId', 'isApproved', 'role'];
+                let retryData = { ...data };
+                let strippedAny = false;
+                
+                for (const col of columnsToTryStripping) {
+                    if (error.message?.includes(col) && col in retryData) {
+                        console.warn(`Stripping missing column: ${col}`);
+                        delete retryData[col];
+                        strippedAny = true;
+                    }
+                }
+                
+                // If we couldn't find a match in the message, try stripping the most likely one (managerId) anyway
+                if (!strippedAny && 'managerId' in retryData) {
+                    delete retryData.managerId;
+                    strippedAny = true;
+                }
+                
+                if (strippedAny) {
+                    const { error: retryError } = await supabase.from('users').upsert(retryData, { onConflict: 'id' });
+                    if (retryError) throw retryError;
+                    console.log('Sync unblocked via column stripping.');
+                    return;
+                }
+            }
+            throw error;
+        }
+    };
+
     try {
-      await supabase.from('users').upsert(user);
-    } catch (e) {}
-    const local = JSON.parse(localStorage.getItem(LOCAL_KEYS.USERS) || '[]');
-    const idx = local.findIndex((u: any) => u.id === user.id);
-    if (idx >= 0) local[idx] = user; else local.push(user);
-    localStorage.setItem(LOCAL_KEYS.USERS, JSON.stringify(local));
+      await attemptSave(sanitizedUser);
+      console.log('Sync Successful:', user.username);
+    } catch (e: any) {
+      const errMsg = getErrorMessage(e);
+      console.error('CRITICAL: Sync Failed.', errMsg);
+      throw new Error(errMsg);
+    } finally {
+        // Always update local cache for robustness
+        const localRaw = localStorage.getItem(LOCAL_KEYS.USERS);
+        const local = localRaw ? JSON.parse(localRaw) : [...SEED_USERS];
+        const idx = local.findIndex((u: any) => u.id === user.id);
+        if (idx >= 0) {
+            local[idx] = { ...local[idx], ...user }; 
+        } else {
+            local.push(user);
+        }
+        localStorage.setItem(LOCAL_KEYS.USERS, JSON.stringify(local));
+    }
   },
 
   getFeedbacks: async (): Promise<Feedback[]> => {
     try {
       const { data, error } = await supabase.from('feedbacks').select('*');
-      if (error) throw error;
-      localStorage.setItem(LOCAL_KEYS.FEEDBACKS, JSON.stringify(data));
-      return data;
-    } catch (e) {
-      const local = localStorage.getItem(LOCAL_KEYS.FEEDBACKS);
-      return local ? JSON.parse(local) : [];
-    }
+      if (!error && data) return data;
+      return [];
+    } catch (e) { return []; }
   },
 
   saveFeedback: async (feedback: Feedback) => {
-    try {
-      await supabase.from('feedbacks').upsert(feedback);
+    try { 
+        const sanitized = sanitizeForSupabase(feedback);
+        const { error } = await supabase.from('feedbacks').upsert(sanitized, { onConflict: 'id' });
+        if (error) throw error;
     } catch (e) {}
-    const local = JSON.parse(localStorage.getItem(LOCAL_KEYS.FEEDBACKS) || '[]');
-    const idx = local.findIndex((f: any) => f.id === feedback.id);
-    if (idx >= 0) local[idx] = feedback; else local.push(feedback);
-    localStorage.setItem(LOCAL_KEYS.FEEDBACKS, JSON.stringify(local));
   },
 
   getLogs: async (): Promise<AuditLog[]> => {
     try {
-      const { data, error } = await supabase.from('audit_logs').select('*').order('timestamp', { ascending: false }).limit(500);
-      if (error) throw error;
-      return data;
-    } catch (e) {
-      const local = localStorage.getItem(LOCAL_KEYS.LOGS);
-      return local ? JSON.parse(local) : [];
-    }
+      const { data, error } = await supabase.from('audit_logs').select('*').order('timestamp', { ascending: false }).limit(200);
+      if (!error && data) return data;
+      return [];
+    } catch (e) { return []; }
   },
 
   saveLog: async (log: AuditLog) => {
-    try { await supabase.from('audit_logs').insert(log); } catch (e) {}
-    const local = JSON.parse(localStorage.getItem(LOCAL_KEYS.LOGS) || '[]');
-    local.unshift(log);
-    localStorage.setItem(LOCAL_KEYS.LOGS, JSON.stringify(local.slice(0, 500)));
-  },
-
-  getNotes: async (userId: string): Promise<Note[]> => {
-    try {
-      const { data, error } = await supabase.from('notes').select('*').eq('userId', userId);
-      if (error) throw error;
-      return data;
-    } catch (e) {
-      const local = JSON.parse(localStorage.getItem(LOCAL_KEYS.NOTES) || '[]');
-      return local.filter((n: any) => n.userId === userId);
-    }
-  },
-
-  saveNote: async (note: Note) => {
-    try { await supabase.from('notes').upsert(note); } catch (e) {}
-    const local = JSON.parse(localStorage.getItem(LOCAL_KEYS.NOTES) || '[]');
-    const idx = local.findIndex((n: any) => n.id === note.id);
-    if (idx >= 0) local[idx] = note; else local.push(note);
-    localStorage.setItem(LOCAL_KEYS.NOTES, JSON.stringify(local));
-  },
-
-  deleteNote: async (noteId: string) => {
-    try { await supabase.from('notes').delete().eq('id', noteId); } catch (e) {}
-    const local = JSON.parse(localStorage.getItem(LOCAL_KEYS.NOTES) || '[]');
-    localStorage.setItem(LOCAL_KEYS.NOTES, JSON.stringify(local.filter((n: any) => n.id !== noteId)));
-  },
-
-  getAnnouncements: async (): Promise<Announcement[]> => {
-    try {
-      const { data, error } = await supabase.from('announcements').select('*');
-      if (error) throw error;
-      return data;
-    } catch (e) {
-      const local = localStorage.getItem(LOCAL_KEYS.ANNOUNCEMENTS);
-      return local ? JSON.parse(local) : [];
-    }
-  },
-
-  saveAnnouncement: async (announcement: Announcement) => {
-    try { await supabase.from('announcements').insert(announcement); } catch (e) {}
-    const local = JSON.parse(localStorage.getItem(LOCAL_KEYS.ANNOUNCEMENTS) || '[]');
-    local.push(announcement);
-    localStorage.setItem(LOCAL_KEYS.ANNOUNCEMENTS, JSON.stringify(local));
-  },
-
-  deleteAnnouncement: async (id: string) => {
-    try { await supabase.from('announcements').delete().eq('id', id); } catch (e) {}
-    const local = JSON.parse(localStorage.getItem(LOCAL_KEYS.ANNOUNCEMENTS) || '[]');
-    localStorage.setItem(LOCAL_KEYS.ANNOUNCEMENTS, JSON.stringify(local.filter((a: any) => a.id !== id)));
+    try { 
+        const sanitized = sanitizeForSupabase(log);
+        await supabase.from('audit_logs').insert(sanitized); 
+    } catch (e) {}
   },
 
   getNotifications: async (userId: string): Promise<Notification[]> => {
     try {
       const { data, error } = await supabase.from('notifications').select('*').eq('userId', userId).order('timestamp', { ascending: false });
-      if (error) throw error;
-      return data;
-    } catch (e) {
-      const local = JSON.parse(localStorage.getItem(LOCAL_KEYS.NOTIFICATIONS) || '[]');
-      return local.filter((n: any) => n.userId === userId).sort((a: any, b: any) => b.timestamp - a.timestamp);
-    }
-  },
-
-  saveNotification: async (notification: Notification) => {
-    try { await supabase.from('notifications').insert(notification); } catch (e) {}
-    const local = JSON.parse(localStorage.getItem(LOCAL_KEYS.NOTIFICATIONS) || '[]');
-    local.unshift(notification);
-    localStorage.setItem(LOCAL_KEYS.NOTIFICATIONS, JSON.stringify(local.slice(0, 100)));
+      if (!error && data) return data;
+      return [];
+    } catch (e) { return []; }
   },
 
   markNotificationRead: async (id: string) => {
     try { await supabase.from('notifications').update({ isRead: true }).eq('id', id); } catch (e) {}
-    const local = JSON.parse(localStorage.getItem(LOCAL_KEYS.NOTIFICATIONS) || '[]');
-    const idx = local.findIndex((n: any) => n.id === id);
-    if (idx >= 0) local[idx].isRead = true;
-    localStorage.setItem(LOCAL_KEYS.NOTIFICATIONS, JSON.stringify(local));
   },
 
   markAllNotificationsRead: async (userId: string) => {
     try { await supabase.from('notifications').update({ isRead: true }).eq('userId', userId); } catch (e) {}
-    const local = JSON.parse(localStorage.getItem(LOCAL_KEYS.NOTIFICATIONS) || '[]');
-    const updated = local.map((n: any) => n.userId === userId ? { ...n, isRead: true } : n);
-    localStorage.setItem(LOCAL_KEYS.NOTIFICATIONS, JSON.stringify(updated));
   },
 
   getArticles: async (): Promise<Article[]> => {
     try {
       const { data, error } = await supabase.from('articles').select('*');
-      if (error) throw error;
-      return data;
-    } catch (e) {
-      const local = localStorage.getItem(LOCAL_KEYS.ARTICLES);
-      return local ? JSON.parse(local) : SEED_ARTICLES;
-    }
+      if (!error && data) return data;
+      return [];
+    } catch (e) { return []; }
   },
 
-  saveArticle: async (article: Article) => {
-    try { await supabase.from('articles').upsert(article); } catch (e) {}
-    const local = JSON.parse(localStorage.getItem(LOCAL_KEYS.ARTICLES) || '[]');
-    const idx = local.findIndex((a: any) => a.id === article.id);
-    if (idx >= 0) local[idx] = article; else local.push(article);
-    localStorage.setItem(LOCAL_KEYS.ARTICLES, JSON.stringify(local));
+  getNotes: async (userId: string): Promise<Note[]> => {
+    try {
+      const { data, error } = await supabase.from('notes').select('*').eq('userId', userId);
+      if (!error && data) return data;
+      return [];
+    } catch (e) { return []; }
+  },
+
+  saveNote: async (note: Note) => {
+    try { 
+        const sanitized = sanitizeForSupabase(note);
+        await supabase.from('notes').upsert(sanitized, { onConflict: 'id' }); 
+    } catch (e) {}
+  },
+
+  deleteNote: async (id: string) => {
+    try { await supabase.from('notes').delete().eq('id', id); } catch (e) {}
+  },
+
+  saveAnnouncement: async (a: Announcement) => {
+    try { 
+        const sanitized = sanitizeForSupabase(a);
+        await supabase.from('announcements').insert(sanitized); 
+    } catch (e) {}
+  },
+
+  getAnnouncements: async (): Promise<Announcement[]> => {
+    try {
+      const { data, error } = await supabase.from('announcements').select('*');
+      if (!error && data) return data;
+      return [];
+    } catch (e) { return []; }
+  },
+
+  deleteAnnouncement: async (id: string) => {
+    try { await supabase.from('announcements').delete().eq('id', id); } catch (e) {}
+  },
+
+  saveArticle: async (a: Article) => {
+    try { 
+        const sanitized = sanitizeForSupabase(a);
+        await supabase.from('articles').upsert(sanitized, { onConflict: 'id' }); 
+    } catch (e) {}
   },
 
   deleteArticle: async (id: string) => {
     try { await supabase.from('articles').delete().eq('id', id); } catch (e) {}
-    const local = JSON.parse(localStorage.getItem(LOCAL_KEYS.ARTICLES) || '[]');
-    localStorage.setItem(LOCAL_KEYS.ARTICLES, JSON.stringify(local.filter((a: any) => a.id !== id)));
   },
 
-  deleteUser: async (userId: string): Promise<boolean> => {
+  deleteUser: async (id: string) => {
     try {
-      await supabase.from('users').delete().eq('id', userId);
-      const local = JSON.parse(localStorage.getItem(LOCAL_KEYS.USERS) || '[]');
-      localStorage.setItem(LOCAL_KEYS.USERS, JSON.stringify(local.filter((u: any) => u.id !== userId)));
+      await supabase.from('users').delete().eq('id', id);
       return true;
-    } catch (e) { return false; }
+    } catch { return false; }
   }
 };
 
