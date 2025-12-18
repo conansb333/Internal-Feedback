@@ -105,19 +105,6 @@ const RAW_ASSOCIATE_DATA = [
     ["Yasser Hayah", "TBD"], ["YASSINE EL HILALI", "TBD"], ["YOUSSEF EL BOUCHTAOUI", "TBD"], ["Loubna Sttaf", "TBD"]
 ];
 
-const associates: User[] = RAW_ASSOCIATE_DATA.map(([assocName, managerName]) => {
-  const mgrId = managerName === "TBD" ? null : createId(managerName);
-  return {
-    id: createId(assocName),
-    username: createUsername(assocName),
-    name: assocName,
-    role: UserRole.USER,
-    password: 'password',
-    isApproved: true,
-    managerId: mgrId
-  };
-});
-
 const adminUser: User = { 
   id: createId('Abdessamad Nahid'), 
   username: 'conan.sb3', 
@@ -127,6 +114,21 @@ const adminUser: User = {
   isApproved: true,
   managerId: createId('Rihab Lasri')
 };
+
+const associates: User[] = RAW_ASSOCIATE_DATA
+  .filter(([assocName]) => createId(assocName) !== adminUser.id) // Filter out duplicates of Admin
+  .map(([assocName, managerName]) => {
+    const mgrId = managerName === "TBD" ? null : createId(managerName);
+    return {
+      id: createId(assocName),
+      username: createUsername(assocName),
+      name: assocName,
+      role: UserRole.USER,
+      password: 'password',
+      isApproved: true,
+      managerId: mgrId
+    };
+  });
 
 export const SEED_USERS: User[] = [adminUser, ...managers, ...associates];
 
