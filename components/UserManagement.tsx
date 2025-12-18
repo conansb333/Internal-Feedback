@@ -17,7 +17,8 @@ import {
   List,
   ChevronUp,
   CheckCircle,
-  Search
+  Search,
+  AlertCircle
 } from 'lucide-react';
 
 interface UserManagementProps {
@@ -374,7 +375,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
       )}
 
       {viewMode === 'hierarchy' ? (
-        <div className="w-full space-y-20 pb-24 max-w-7xl mx-auto">
+        <div className="w-full space-y-12 pb-24 max-w-7xl mx-auto">
             {rootUsers.length > 0 && rootUsers.map(root => (
               <UserNode 
                 key={root.id} 
@@ -387,33 +388,33 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
             ))}
 
             {isManagerOrAdmin && unassignedUsers.length > 0 && (
-              <div className="w-full bg-white/50 dark:bg-slate-900/40 p-12 rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-slate-800 mt-20">
-                  <div className="flex items-center gap-4 mb-10">
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400">
-                          <AlertTriangle className="w-5 h-5" />
+              <div className="w-full bg-white dark:bg-slate-900/40 p-6 md:p-10 rounded-[2rem] border border-slate-200 dark:border-slate-800 mt-12 shadow-inner">
+                  <div className="flex items-center gap-3 mb-8">
+                      <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500">
+                          <AlertCircle className="w-5 h-5" />
                       </div>
-                      <h3 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-4">
-                        Floating Entities
-                        <span className="text-xs bg-indigo-600 text-white px-3 py-1 rounded-full font-bold">{unassignedUsers.length}</span>
-                      </h3>
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Floating Entities</h3>
+                        <span className="text-[10px] bg-indigo-600 text-white px-2 py-0.5 rounded-full font-bold">{unassignedUsers.length}</span>
+                      </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                       {unassignedUsers.map(user => (
-                          <div key={user.id} className="relative group bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center gap-4 transition-all duration-300 hover:border-indigo-400 dark:hover:border-indigo-500/50 hover:shadow-2xl">
-                              <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-lg font-bold text-slate-400 dark:text-slate-500 shrink-0">
+                          <div key={user.id} className="group relative bg-white dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-3 transition-all duration-200 hover:border-indigo-400 dark:hover:border-indigo-500/50 hover:shadow-lg">
+                              <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm font-bold text-slate-400 dark:text-slate-500 shrink-0">
                                   {user.name.charAt(0)}
                               </div>
                               <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user.name}</p>
-                                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">@{user.username}</p>
+                                  <p className="text-[13px] font-bold text-slate-900 dark:text-white truncate leading-tight">{user.name}</p>
+                                  <p className="text-[9px] text-slate-400 dark:text-slate-500 font-mono truncate">@{user.username}</p>
                               </div>
                               {canManageUser(user) && (
                                 <button 
                                   onClick={() => setUserToDelete(user)} 
-                                  className="absolute top-2 right-2 md:opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 transition-all"
+                                  className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 transition-all absolute right-1 top-1"
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                               )}
                           </div>
