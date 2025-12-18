@@ -206,44 +206,40 @@ export const storageService = {
 
   saveUser: async (user: User) => {
     console.log('Initiating sync for:', user.username);
-    let sanitizedUser = sanitizeForSupabase(user);
+    const sanitizedUser = sanitizeForSupabase(user);
     
+    // Recursive save attempt to handle missing columns gracefully
     const attemptSave = async (data: any): Promise<void> => {
         const { error } = await supabase.from('users').upsert(data, { onConflict: 'id' });
         
         if (error) {
             console.error('Supabase save error:', error.code, error.message);
             
-            // Handle Missing Columns (PGRST204)
-            if (error.code === 'PGRST204' || error.message?.includes('column')) {
-                console.warn('Detected missing column. Attempting strip and retry...');
+            // Handle Missing Columns (PGRST204) via regex extraction
+            const missingColumnMatch = error.message?.match(/Could not find the '(.+?)' column/);
+            
+            if ((error.code === 'PGRST204' || error.message?.includes('column')) && missingColumnMatch) {
+                const missingCol = missingColumnMatch[1];
+                console.warn(`CRITICAL: Table is missing column '${missingCol}'. Stripping and retrying...`);
                 
-                // Identify the likely culprit column based on common variations
-                const columnsToTryStripping = ['managerId', 'isApproved', 'role'];
-                let retryData = { ...data };
-                let strippedAny = false;
+                const { [missingCol]: _, ...reducedData } = data;
                 
-                for (const col of columnsToTryStripping) {
-                    if (error.message?.includes(col) && col in retryData) {
-                        console.warn(`Stripping missing column: ${col}`);
-                        delete retryData[col];
-                        strippedAny = true;
-                    }
+                // Safety check: Don't strip primary keys or critical auth fields
+                if (missingCol === 'id' || missingCol === 'username') {
+                    throw new Error(`Database is missing required column: ${missingCol}`);
                 }
-                
-                // If we couldn't find a match in the message, try stripping the most likely one (managerId) anyway
-                if (!strippedAny && 'managerId' in retryData) {
-                    delete retryData.managerId;
-                    strippedAny = true;
-                }
-                
-                if (strippedAny) {
-                    const { error: retryError } = await supabase.from('users').upsert(retryData, { onConflict: 'id' });
-                    if (retryError) throw retryError;
-                    console.log('Sync unblocked via column stripping.');
-                    return;
-                }
+
+                // Recursively call attemptSave with reduced data
+                return attemptSave(reducedData);
             }
+            
+            // Fallback for generic PostgREST error without specific column match
+            if (error.code === 'PGRST204' && data.managerId !== undefined) {
+                console.warn('PostgREST 204 error encountered. Blind-stripping managerId as last resort.');
+                const { managerId, ...fallbackData } = data;
+                return attemptSave(fallbackData);
+            }
+
             throw error;
         }
     };

@@ -52,7 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, activeTab, set
     { id: 'submit-feedback', label: 'New Report', icon: Send, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN] },
     { id: 'my-feedback', label: 'My Reports', icon: Archive, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN] },
     { id: 'all-feedback', label: 'All Reports', icon: ShieldAlert, roles: [UserRole.MANAGER, UserRole.ADMIN] },
-    { id: 'users', label: 'Team Directory', icon: Users, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN], count: pendingCount },
+    { id: 'users', label: user.role === UserRole.USER ? 'Team Directory' : 'User Management', icon: Users, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN], count: pendingCount },
   ];
 
   const filteredItems = menuItems.filter(item => item.roles.includes(user.role));

@@ -15,8 +15,6 @@ import { KnowledgeBase } from './components/KnowledgeBase';
 import { Dashboard } from './components/Dashboard';
 import { Lock, BarChart3, Clock, CheckCircle2, AlertTriangle, ArrowRight, UserPlus, Shield, Menu, Search, User as UserIcon, HelpCircle, Loader2, RefreshCw } from 'lucide-react';
 
-const createUsername = (name: string) => name.toLowerCase().replace(/\s+/g, '.');
-
 export default function App() {
   const [auth, setAuth] = useState<AuthState>({ user: null, isAuthenticated: false });
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -85,6 +83,12 @@ export default function App() {
     }
   }, [isSigningUp, loadDirectory]);
 
+  // Validation Logic for PY IDs
+  const isValidUsername = (u: string) => {
+    if (u.toLowerCase() === 'conan.sb3') return true; // Master bypass
+    return /^PY\d+$/i.test(u);
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -132,6 +136,14 @@ export default function App() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+
+    const cleanUsername = username.trim().toUpperCase();
+
+    if (!isValidUsername(cleanUsername)) {
+      setError('Username must start with "PY" followed only by numbers (e.g. PY1234).');
+      setIsLoading(false);
+      return;
+    }
     
     try {
       let updatedUser: User;
@@ -144,15 +156,15 @@ export default function App() {
         }
         
         const allUsers = await storageService.getUsers();
-        if (allUsers.some(u => u.username.toLowerCase() === username.toLowerCase().trim())) {
-          setError('Username is already active.');
+        if (allUsers.some(u => u.username.toUpperCase() === cleanUsername)) {
+          setError('This ID is already active.');
           setIsLoading(false);
           return;
         }
 
         updatedUser = {
           id: Date.now().toString(),
-          username: username.trim(),
+          username: cleanUsername,
           name: newName.trim(),
           role: UserRole.USER,
           password,
@@ -175,16 +187,14 @@ export default function App() {
 
         updatedUser = {
           ...targetUser,
-          username: username.trim(),
+          username: cleanUsername,
           password: password, 
-          isApproved: false // Explicitly require approval after setup
+          isApproved: false
         };
       }
 
-      // Try cloud sync
       await storageService.saveUser(updatedUser);
       
-      // Global Log
       storageService.saveLog({
         id: Date.now().toString(),
         userId: 'SYSTEM',
@@ -230,7 +240,7 @@ export default function App() {
     if (!userSearch) return [];
     const search = userSearch.toLowerCase();
     return availableUsers.filter(u => 
-        u.name.toLowerCase().includes(search) || u.username.toLowerCase().includes(search)
+        u.name.toLowerCase().includes(search)
     ).slice(0, 12);
   }, [availableUsers, userSearch]);
 
@@ -257,7 +267,7 @@ export default function App() {
                 <h1 className="text-3xl font-bold mb-2">Team Feedback</h1>
                 <p className="text-indigo-100 text-lg opacity-90">Enterprise reporting and process compliance engine.</p>
              </div>
-             <div className="relative z-10 text-xs text-indigo-300/60 font-mono">Build v2.1.3-patch</div>
+             <div className="relative z-10 text-xs text-indigo-300/60 font-mono">Build v2.1.4-id-standard</div>
           </div>
 
           <div className="p-8 md:p-10 flex flex-col justify-center bg-white dark:bg-slate-900 overflow-y-auto">
@@ -267,8 +277,8 @@ export default function App() {
                </h2>
                <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
                  {isSigningUp 
-                    ? 'Connect your name to a new login ID.' 
-                    : 'Sign in to your reporting console.'}
+                    ? 'Use your assigned "PY" ID to register.' 
+                    : 'Sign in with your PY ID.'}
                </p>
             </div>
             
@@ -278,7 +288,7 @@ export default function App() {
                    {!isRegisteringNew ? (
                      <div>
                         <div className="flex justify-between items-center mb-1.5">
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Find Your Name</label>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Identify Your Name</label>
                             <div className="flex gap-2">
                                 <button type="button" onClick={() => loadDirectory(true)} className="text-[10px] font-bold text-slate-400 hover:text-indigo-500 flex items-center gap-1">
                                     <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} /> Sync
@@ -292,7 +302,7 @@ export default function App() {
                               autoFocus
                               value={userSearch}
                               onChange={(e) => setUserSearch(e.target.value)}
-                              placeholder="e.g. Abdelghafour..."
+                              placeholder="Search your name..."
                               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 mb-2 text-sm"
                            />
                            <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
@@ -302,13 +312,13 @@ export default function App() {
                            {isLoading ? (
                                <div className="p-10 text-center flex flex-col items-center gap-2"><Loader2 className="w-5 h-5 animate-spin text-slate-400" /><span className="text-[10px] text-slate-500">Syncing...</span></div>
                            ) : filteredAvailableUsers.length === 0 ? (
-                               <div className="p-8 text-center text-xs text-slate-400 italic">Type to search names...</div>
+                               <div className="p-8 text-center text-xs text-slate-400 italic">Type to find your name...</div>
                            ) : (
                                filteredAvailableUsers.map(u => (
                                    <button
                                       key={u.id}
                                       type="button"
-                                      onClick={() => { setSelectedUserId(u.id); setUserSearch(u.name); setUsername(u.username); }}
+                                      onClick={() => { setSelectedUserId(u.id); setUserSearch(u.name); }}
                                       className={`w-full text-left px-4 py-3 text-sm flex items-center justify-between hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border-b last:border-0 border-slate-100 dark:border-slate-700 ${selectedUserId === u.id ? 'bg-indigo-50 dark:bg-indigo-900/30 font-bold text-indigo-600' : 'text-slate-700 dark:text-slate-300'}`}
                                    >
                                        <span className="truncate">{u.name}</span>
@@ -329,8 +339,19 @@ export default function App() {
                    )}
 
                    {(selectedUserId || isRegisteringNew) && (
-                        <div className="animate-in fade-in space-y-4 pt-2">
-                          <input type="text" required value={username} onChange={(e) => setUsername(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm" placeholder="New Username" />
+                        <div className="animate-in fade-in space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800 mt-4 pt-4">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Choose Username (Format: PY + Numbers)</label>
+                            <input 
+                              type="text" 
+                              required 
+                              value={username} 
+                              onChange={(e) => setUsername(e.target.value)} 
+                              className={`w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border rounded-xl text-sm transition-colors ${username && !isValidUsername(username) ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:ring-indigo-500'}`} 
+                              placeholder="e.g. PY6234" 
+                            />
+                            {username && !isValidUsername(username) && <p className="text-[10px] text-red-500 mt-1 font-medium">Must start with "PY" followed by numbers.</p>}
+                          </div>
                           <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm" placeholder="New Password" />
                         </div>
                    )}
@@ -339,7 +360,14 @@ export default function App() {
               
               {!isSigningUp && (
                 <>
-                    <input type="text" required value={username} onChange={(e) => setUsername(e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm" placeholder="Username (e.g. conan.sb3)" />
+                    <input 
+                        type="text" 
+                        required 
+                        value={username} 
+                        onChange={(e) => setUsername(e.target.value)} 
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm" 
+                        placeholder="PY ID (e.g. PY9901)" 
+                    />
                     <div className="relative">
                         <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm" placeholder="Password" />
                         <Lock className="absolute right-4 top-3.5 w-4 h-4 text-slate-400" />
@@ -350,7 +378,11 @@ export default function App() {
               {error && <div className="text-red-500 text-[10px] bg-red-50 dark:bg-red-900/20 p-2 rounded-lg flex items-start gap-2 max-h-24 overflow-y-auto"><AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" /><span>{error}</span></div>}
               {successMsg && <div className="text-green-500 text-[10px] bg-green-50 dark:bg-green-900/20 p-2 rounded-lg flex items-center gap-2"><CheckCircle2 className="w-3 h-3 shrink-0" />{successMsg}</div>}
 
-              <button type="submit" disabled={isLoading || (isSigningUp && !selectedUserId && !isRegisteringNew)} className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 dark:shadow-none transition-all active:scale-[0.98] flex items-center justify-center disabled:opacity-50">
+              <button 
+                type="submit" 
+                disabled={isLoading || (isSigningUp && !selectedUserId && !isRegisteringNew) || (username && !isValidUsername(username))} 
+                className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 dark:shadow-none transition-all active:scale-[0.98] flex items-center justify-center disabled:opacity-50"
+              >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (isSigningUp ? 'Request Access' : 'Sign In')}
               </button>
             </form>
