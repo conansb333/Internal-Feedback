@@ -52,7 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, activeTab, set
     { id: 'submit-feedback', label: 'New Report', icon: Send, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN] },
     { id: 'my-feedback', label: 'My Reports', icon: Archive, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN] },
     { id: 'all-feedback', label: 'All Reports', icon: ShieldAlert, roles: [UserRole.MANAGER, UserRole.ADMIN] },
-    { id: 'users', label: user.role === UserRole.USER ? 'Team Directory' : 'User Management', icon: Users, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN], count: pendingCount },
+    { id: 'users', label: 'Organization Management', icon: Users, roles: [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN], count: pendingCount },
   ];
 
   const filteredItems = menuItems.filter(item => item.roles.includes(user.role));
@@ -68,7 +68,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, activeTab, set
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             </div>
-            Feedback
+            Internal Feedback
           </h1>
           
           <div className="flex items-center gap-1">
@@ -89,19 +89,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, activeTab, set
 
         {showNotifications && <Notifications currentUser={user} onClose={() => setShowNotifications(false)} />}
         
-        <nav className="flex-1 px-4 py-2 space-y-1.5 overflow-y-auto">
+        <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto">
           {filteredItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
-              <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-xl transition-all group ${isActive ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+              <button 
+                key={item.id} 
+                onClick={() => { setActiveTab(item.id); onClose?.(); }} 
+                className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-xl transition-all group ${
+                  isActive 
+                    ? 'bg-indigo-600/10 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300' 
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+              >
                 <div className="flex items-center">
-                  <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                  <Icon className={`w-5 h-5 mr-3 transition-colors ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 group-hover:text-slate-600'}`} />
                   {item.label}
                 </div>
                 {item.count ? (
                     <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-bounce">{item.count}</span>
-                ) : isActive && <ChevronRight className="w-4 h-4 text-indigo-400" />}
+                ) : isActive && <ChevronRight className="w-4 h-4 text-indigo-400 opacity-70" />}
               </button>
             );
           })}

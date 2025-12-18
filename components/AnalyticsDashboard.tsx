@@ -175,17 +175,19 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ currentU
 
   return (
     <div className="p-8 h-full overflow-y-auto">
-      <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
-                <PieChart className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-                {isManager ? "Team Diagnostics" : "My Performance Analytics"}
-            </h2>
-            <p className="text-slate-500 dark:text-slate-400 mt-1">
-                {isManager 
-                ? `Analysis based on ${totalAnalyzed} Approved Reports across the team.` 
-                : `Analysis based on ${totalAnalyzed} approved reports about your work.`}
-            </p>
+      <div className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex items-center gap-4">
+            <div className="p-3 bg-indigo-600 rounded-2xl shadow-xl shadow-indigo-100 dark:shadow-indigo-900/20">
+               <PieChart className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Analytics</h2>
+              <p className="text-slate-500 dark:text-slate-400 mt-1">
+                  {isManager 
+                  ? `Analysis based on ${totalAnalyzed} Approved Reports across the team.` 
+                  : `Analysis based on ${totalAnalyzed} approved reports about your work.`}
+              </p>
+            </div>
         </div>
       </div>
 
@@ -278,7 +280,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ currentU
                         <Activity className="w-5 h-5 text-orange-500" />
                         <span className="text-xl font-bold text-orange-700 dark:text-orange-300">{executionPct}%</span>
                      </div>
-                     <p className="text-sm font-bold text-orange-900 dark:text-orange-100">Execution</p>
+                     <p className="text-sm font-bold text-orange-900 dark:text-blue-100">Execution</p>
                      <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">Errors, SLAs</p>
                  </div>
                  {/* Behavior */}
@@ -287,7 +289,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ currentU
                         <UserX className="w-5 h-5 text-purple-500" />
                         <span className="text-xl font-bold text-purple-700 dark:text-purple-300">{behaviorPct}%</span>
                      </div>
-                     <p className="text-sm font-bold text-purple-900 dark:text-purple-100">Behavior</p>
+                     <p className="text-sm font-bold text-purple-900 dark:text-blue-100">Behavior</p>
                      <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">Conduct Issues</p>
                  </div>
              </div>

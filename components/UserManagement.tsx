@@ -185,10 +185,10 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
           const myManagerId = currentUser.managerId;
           filtered = users.filter(u => {
               const isSelf = u.id === currentUser.id;
-              const isMyManager = u.id === myManagerId;
+              const iMyManager = u.id === myManagerId;
               const isMyColleague = myManagerId && u.managerId === myManagerId;
               const isUnassigned = !u.managerId;
-              return isSelf || isMyManager || isMyColleague || isUnassigned;
+              return isSelf || iMyManager || isMyColleague || isUnassigned;
           });
       }
       
@@ -300,7 +300,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
                <Users className="w-8 h-8 text-white" />
            </div>
            <div>
-              <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Organization Directory</h2>
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Organization Management</h2>
               <p className="text-slate-500 dark:text-slate-400 mt-1">Explore team structure and manage roles.</p>
            </div>
         </div>

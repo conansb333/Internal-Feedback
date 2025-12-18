@@ -93,7 +93,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, setActiveTab }) => {
              <LayoutDashboard className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Overview</h2>
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Dashboard</h2>
             <p className="text-slate-500 dark:text-slate-400 mt-1">
               {isManager 
                 ? "Track team performance, approvals, and critical incidents." 
